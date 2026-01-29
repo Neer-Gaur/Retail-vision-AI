@@ -6,8 +6,13 @@ import { useAuthStore } from './store/authStore';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
+import DashboardHome from './pages/DashboardHome';
+import Inventory from './pages/Inventory';
+import Analytics from './pages/Analytics';
+import Leads from './pages/Leads';
+import Subscription from './pages/Subscription';
 import Kiosk from './pages/Kiosk';
+import DashboardLayout from './components/DashboardLayout';
 
 const queryClient = new QueryClient();
 
@@ -16,8 +21,8 @@ function PrivateRoute({ children }) {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
       </div>
     );
   }
@@ -31,7 +36,7 @@ function App() {
   useEffect(() => {
     initialize();
   }, [initialize]);
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -39,25 +44,19 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/kiosk"
-            element={
-              <PrivateRoute>
-                <Kiosk />
-              </PrivateRoute>
-            }
-          />
+          <Route path="/kiosk" element={<PrivateRoute><Kiosk /></PrivateRoute>} />
+          
+          {/* Dashboard Routes with Layout */}
+          <Route path="/dashboard" element={<PrivateRoute><DashboardLayout /></PrivateRoute>}>
+            <Route index element={<DashboardHome />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="subscription" element={<Subscription />} />
+          </Route>
         </Routes>
+        <Toaster position="top-right" richColors />
       </BrowserRouter>
-      <Toaster position="top-right" />
     </QueryClientProvider>
   );
 }
