@@ -337,7 +337,7 @@ export default function Kiosk() {
   const overlayType = shop?.industry === 'fashion' ? 'silhouette' : 'grid';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-slate-950 text-white relative">
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 relative">
       {/* Logo for Exit */}
       <motion.div
         ref={logoRef}
@@ -349,11 +349,11 @@ export default function Kiosk() {
         className="absolute top-6 left-6 z-50 cursor-pointer select-none"
         data-testid="kiosk-logo"
       >
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         {longPressDuration > 0 && (
-          <div className="absolute -bottom-2 left-0 w-12 h-1 bg-slate-700 rounded overflow-hidden">
+          <div className="absolute -bottom-2 left-0 w-12 h-1 bg-slate-200 rounded overflow-hidden">
             <div
               className="h-full bg-violet-500 rounded transition-all"
               style={{ width: `${(longPressDuration / 5000) * 100}%` }}
