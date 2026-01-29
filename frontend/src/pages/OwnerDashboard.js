@@ -572,7 +572,7 @@ export default function OwnerDashboard() {
 
               {filteredInventory.length === 0 && (
                 <div className="text-center py-12 text-slate-500">
-                  {searchQuery ? 'No items match your search.' : `No items yet. Click "Add ${itemLabel}" to get started.`}
+                  {searchQuery ? 'No items match your search.' : 'No items yet. Click "Add Item" to get started.'}
                 </div>
               )}
             </div>
