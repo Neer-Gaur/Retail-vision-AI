@@ -199,6 +199,9 @@
         - working: false
           agent: "testing"
           comment: "❌ Kiosk mode has overlay interception issues. Lead capture form loads correctly with all inputs, but submit button is blocked by webpack dev server overlay iframe. Form submission fails due to pointer event interception."
+        - working: false
+          agent: "testing"
+          comment: "❌ Kiosk mode still has critical issues. Navigation to /kiosk works, but 'Permissions check failed' error overlay blocks functionality. Lead capture form elements detected but form interaction blocked by overlay. This is a development environment issue that needs resolution."
 
   - task: "Analytics Dashboard"
     implemented: true
