@@ -520,7 +520,7 @@ export default function OwnerDashboard() {
                     whileHover={{ y: -4 }}
                     className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-floating transition-all"
                   >
-                    <div className="h-48 overflow-hidden bg-slate-100 flex items-center justify-center">
+                    <div className="h-48 bg-slate-50 flex items-center justify-center rounded-t-2xl overflow-hidden">
                       <img
                         src={item.image}
                         alt={item.name}
