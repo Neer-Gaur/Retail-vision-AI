@@ -14,6 +14,7 @@ import bcrypt
 import jwt
 import fal_client
 import asyncio
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
