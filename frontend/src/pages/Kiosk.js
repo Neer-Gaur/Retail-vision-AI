@@ -642,13 +642,6 @@ export default function Kiosk() {
                 ))}
               </div>
 
-              {filteredInventory.length === 0 && (
-                <div className="text-center py-20 text-slate-500">
-                  <Eye className="w-16 h-16 mx-auto mb-4 text-slate-700" />
-                  <p className="text-xl">No products available</p>
-                </div>
-              )}
-
               {/* Floating Action Button */}
               <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
                 <Button
