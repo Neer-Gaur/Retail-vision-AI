@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, LogOut, Plus, BarChart3, Package, Rocket, Edit2, Trash2 } from 'lucide-react';
+import { Eye, LogOut, Plus, BarChart3, Package, Rocket, Edit2, Trash2, Upload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { inventoryAPI, analyticsAPI, leadsAPI } from '@/services/api';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function OwnerDashboard() {
   const navigate = useNavigate();
@@ -19,6 +22,7 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -57,6 +61,32 @@ export default function OwnerDashboard() {
 
   const handleLaunchKiosk = () => {
     navigate('/kiosk');
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${BACKEND_URL}/api/upload-image`, formDataUpload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setFormData({ ...formData, image: response.data.image_url });
+      toast.success('Image uploaded successfully!');
+    } catch (error) {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmitItem = async (e) => {
@@ -115,11 +145,11 @@ export default function OwnerDashboard() {
   const itemLabel = industry === 'fashion' ? 'Saree' : 'Tile';
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white noise-bg">
-      <nav className="border-b border-white/10 backdrop-blur-xl bg-black/40">
+    <div className="min-h-screen bg-slate-50 text-slate-900 noise-bg">
+      <nav className="border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Eye className="w-8 h-8 text-[#F97316]" />
+            <Eye className="w-8 h-8 text-black" />
             <span className="text-2xl font-bold">Dashboard</span>
           </div>
 
@@ -127,7 +157,7 @@ export default function OwnerDashboard() {
             <Button
               data-testid="launch-kiosk-btn"
               onClick={handleLaunchKiosk}
-              className="btn-primary bg-[#F97316] hover:bg-[#F97316]/90"
+              className="btn-primary"
             >
               <Rocket className="w-4 h-4 mr-2" />
               Launch Kiosk
@@ -136,7 +166,7 @@ export default function OwnerDashboard() {
               data-testid="owner-logout-btn"
               onClick={handleLogout}
               variant="ghost"
-              className="hover:bg-white/10"
+              className="rounded-full"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -147,12 +177,12 @@ export default function OwnerDashboard() {
 
       <main className="max-w-7xl mx-auto p-6">
         <Tabs defaultValue="inventory" className="space-y-6">
-          <TabsList className="bg-white/5">
-            <TabsTrigger value="inventory" data-testid="tab-inventory">
+          <TabsList className="bg-white border border-slate-200 rounded-full p-1">
+            <TabsTrigger value="inventory" data-testid="tab-inventory" className="rounded-full">
               <Package className="w-4 h-4 mr-2" />
               Inventory
             </TabsTrigger>
-            <TabsTrigger value="analytics" data-testid="tab-analytics">
+            <TabsTrigger value="analytics" data-testid="tab-analytics" className="rounded-full">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
             </TabsTrigger>
@@ -160,7 +190,9 @@ export default function OwnerDashboard() {
 
           <TabsContent value="inventory">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold admin-heading">{itemLabel.toUpperCase()} INVENTORY</h2>
+              <h2 className="text-3xl font-light">
+                {itemLabel} <span className="font-bold">Inventory</span>
+              </h2>
               <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogTrigger asChild>
                   <Button
@@ -175,11 +207,48 @@ export default function OwnerDashboard() {
                     Add {itemLabel}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-[#1E293B] border-white/10">
+                <DialogContent className="bg-white border-slate-200">
                   <DialogHeader>
-                    <DialogTitle>{editingItem ? 'Edit' : 'Add'} {itemLabel}</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold">{editingItem ? 'Edit' : 'Add'} {itemLabel}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSubmitItem} className="space-y-4">
+                    <div>
+                      <Label className="text-slate-700 font-medium">Product Image</Label>
+                      <div className="mt-2">
+                        {formData.image && (
+                          <div className="mb-3 relative">
+                            <img src={formData.image} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => document.getElementById('image-upload').click()}
+                            disabled={uploadingImage}
+                            className="btn-secondary flex-1"
+                          >
+                            {uploadingImage ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-4 h-4 mr-2" />
+                                Upload Image
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
                     <div>
                       <Label>Name</Label>
                       <Input
@@ -187,17 +256,7 @@ export default function OwnerDashboard() {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         required
-                        className="bg-white/5 border-white/10"
-                      />
-                    </div>
-                    <div>
-                      <Label>Image URL</Label>
-                      <Input
-                        data-testid="item-image-input"
-                        value={formData.image}
-                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                        required
-                        className="bg-white/5 border-white/10"
+                        className="h-12 rounded-xl border-slate-200 bg-slate-50"
                       />
                     </div>
                     <div>
@@ -207,7 +266,7 @@ export default function OwnerDashboard() {
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         required
-                        className="bg-white/5 border-white/10"
+                        className="h-12 rounded-xl border-slate-200 bg-slate-50"
                       />
                     </div>
                     <div>
@@ -219,7 +278,7 @@ export default function OwnerDashboard() {
                         value={formData.price}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                         required
-                        className="bg-white/5 border-white/10"
+                        className="h-12 rounded-xl border-slate-200 bg-slate-50"
                       />
                     </div>
                     <div>
@@ -229,7 +288,7 @@ export default function OwnerDashboard() {
                         value={formData.tags}
                         onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                         required
-                        className="bg-white/5 border-white/10"
+                        className="h-12 rounded-xl border-slate-200 bg-slate-50"
                       />
                     </div>
                     <div>
@@ -240,7 +299,7 @@ export default function OwnerDashboard() {
                         value={formData.stock}
                         onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                         required
-                        className="bg-white/5 border-white/10"
+                        className="h-12 rounded-xl border-slate-200 bg-slate-50"
                       />
                     </div>
                     <Button data-testid="submit-item-btn" type="submit" className="btn-primary w-full">
@@ -253,8 +312,13 @@ export default function OwnerDashboard() {
 
             <div data-testid="inventory-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {inventory.map((item) => (
-                <div key={item.id} data-testid={`inventory-item-${item.id}`} className="glass-card rounded-2xl overflow-hidden">
-                  <div className="h-48 overflow-hidden">
+                <motion.div 
+                  key={item.id} 
+                  data-testid={`inventory-item-${item.id}`} 
+                  whileHover={{ y: -4 }}
+                  className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-floating transition-all"
+                >
+                  <div className="h-48 overflow-hidden bg-slate-100">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -263,10 +327,10 @@ export default function OwnerDashboard() {
                   </div>
                   <div className="p-4">
                     <h3 className="text-lg font-semibold mb-2">{item.name}</h3>
-                    <p className="text-sm text-gray-400 mb-2">{item.category}</p>
+                    <p className="text-sm text-slate-600 mb-2">{item.category}</p>
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-xl font-bold text-[#F97316]">${item.price}</span>
-                      <span className={`text-sm ${item.stock > 0 ? 'text-[#00FF94]' : 'text-red-500'}`}>
+                      <span className="text-xl font-bold">${item.price}</span>
+                      <span className={`text-sm font-medium ${item.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
                         Stock: {item.stock}
                       </span>
                     </div>
@@ -276,7 +340,7 @@ export default function OwnerDashboard() {
                         onClick={() => handleEdit(item)}
                         size="sm"
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 rounded-full"
                       >
                         <Edit2 className="w-4 h-4 mr-2" />
                         Edit
@@ -286,79 +350,81 @@ export default function OwnerDashboard() {
                         onClick={() => handleDelete(item.id)}
                         size="sm"
                         variant="destructive"
-                        className="flex-1"
+                        className="flex-1 rounded-full"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete
                       </Button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 
             {inventory.length === 0 && (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-slate-500">
                 No items yet. Click "Add {itemLabel}" to get started.
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="analytics">
-            <h2 className="text-3xl font-bold admin-heading mb-6">ANALYTICS HUB</h2>
+            <h2 className="text-3xl font-light mb-6">
+              Analytics <span className="font-bold">Hub</span>
+            </h2>
             
             {analytics && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div data-testid="analytics-visualizations" className="glass-card p-6 rounded-2xl">
-                    <p className="text-sm text-gray-400 mono-label mb-2">TOTAL VISUALIZATIONS</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div data-testid="analytics-visualizations" className="bg-white rounded-2xl border border-slate-100 shadow-soft p-6">
+                    <p className="text-sm text-slate-500 font-medium mb-2">TOTAL VISUALIZATIONS</p>
                     <p className="text-4xl font-bold">{analytics.total_visualizations || 0}</p>
                   </div>
-                  <div data-testid="analytics-leads" className="glass-card p-6 rounded-2xl">
-                    <p className="text-sm text-gray-400 mono-label mb-2">CUSTOMER LEADS</p>
+                  <div data-testid="analytics-leads" className="bg-white rounded-2xl border border-slate-100 shadow-soft p-6">
+                    <p className="text-sm text-slate-500 font-medium mb-2">CUSTOMER LEADS</p>
                     <p className="text-4xl font-bold">{analytics.total_leads || 0}</p>
                   </div>
                 </div>
 
-                <div data-testid="most-visualized-products" className="glass-card p-6 rounded-2xl">
-                  <h3 className="text-2xl font-bold mb-4 admin-heading">MOST VISUALIZED PRODUCTS</h3>
+                <div data-testid="most-visualized-products" className="bg-white rounded-2xl border border-slate-100 shadow-soft p-6">
+                  <h3 className="text-2xl font-bold mb-4">Most Visualized Products</h3>
                   <div className="space-y-4">
                     {analytics.most_visualized?.map((item, index) => (
-                      <div key={index} className="bg-white/5 rounded-xl p-4 flex justify-between items-center">
+                      <div key={index} className="bg-slate-50 rounded-xl p-4 flex justify-between items-center border border-slate-100">
                         <div>
                           <h4 className="font-semibold">{item.product.name}</h4>
-                          <p className="text-sm text-gray-400">{item.product.category}</p>
+                          <p className="text-sm text-slate-600">{item.product.category}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-[#F97316]">{item.visualization_count}</p>
-                          <p className="text-xs text-gray-400">visualizations</p>
+                          <p className="text-2xl font-bold">{item.visualization_count}</p>
+                          <p className="text-xs text-slate-500">visualizations</p>
                         </div>
                       </div>
                     ))}
                     {analytics.most_visualized?.length === 0 && (
-                      <p className="text-gray-400 text-center py-4">No visualization data yet</p>
+                      <p className="text-slate-500 text-center py-4">No visualization data yet</p>
                     )}
                   </div>
                 </div>
 
-                <div data-testid="leads-list" className="glass-card p-6 rounded-2xl">
-                  <h3 className="text-2xl font-bold mb-4 admin-heading">CUSTOMER LEADS</h3>
+                <div data-testid="leads-list" className="bg-white rounded-2xl border border-slate-100 shadow-soft p-6">
+                  <h3 className="text-2xl font-bold mb-4">Customer Leads</h3>
                   <div className="space-y-3">
                     {leads.map((lead) => (
-                      <div key={lead.id} className="bg-white/5 rounded-xl p-4">
+                      <div key={lead.id} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div className="flex justify-between">
                           <div>
                             <p className="font-semibold">{lead.name}</p>
-                            <p className="text-sm text-gray-400">{lead.whatsapp}</p>
+                            <p className="text-sm text-slate-600">{lead.whatsapp}</p>
                           </div>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-slate-500">
                             {new Date(lead.created_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                     ))}
                     {leads.length === 0 && (
-                      <p className="text-gray-400 text-center py-4">No leads captured yet</p>
+                      <p className="text-slate-500 text-center py-4">No leads captured yet</p>
                     )}
                   </div>
                 </div>
