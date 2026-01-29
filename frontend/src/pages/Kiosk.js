@@ -526,8 +526,8 @@ export default function Kiosk() {
             <div className="max-w-7xl mx-auto p-8 pt-20">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                  <h2 className="text-4xl font-bold">Select a Product</h2>
-                  <p className="text-slate-400 mt-2">Choose one item to visualize</p>
+                  <h2 className="text-4xl font-bold text-white">Select a Product</h2>
+                  <p className="text-slate-300 mt-2">Choose one item to visualize</p>
                 </div>
                 
                 <div className="flex gap-3">
