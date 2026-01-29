@@ -701,7 +701,7 @@ export default function Kiosk() {
           </div>
         )}
 
-        {/* STEP 5: Results */}
+        {/* STEP 5: Results - Futuristic Mirror */}
         {step === 'results' && result && (
           <motion.div
             key="results"
@@ -710,63 +710,168 @@ export default function Kiosk() {
             exit={{ opacity: 0 }}
             className="h-full p-8 pt-20 overflow-y-auto hide-scrollbar"
           >
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-white mb-2">Your Visualization</h2>
-                <p className="text-slate-300">See how {result.product.name} looks on you</p>
-              </div>
+            <div className="max-w-6xl mx-auto">
+              {/* Header */}
+              <motion.div 
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-center mb-8"
+              >
+                <h2 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-purple-400 mb-3">
+                  Your Virtual Try-On
+                </h2>
+                <p className="text-slate-300 text-lg">See yourself in {result.product.name}</p>
+              </motion.div>
 
-              <div className="bg-slate-800/80 backdrop-blur-sm rounded-3xl border border-slate-700 p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-semibold text-white">{result.product.name}</h3>
-                  {result.ai_image && (
-                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium">AI Generated</span>
-                  )}
-                </div>
+              {/* Futuristic Mirror Display */}
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: "spring" }}
+                className="relative mb-8"
+              >
+                {/* Outer Glow Effect */}
+                <div className="absolute -inset-4 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 rounded-[3rem] blur-2xl opacity-30 animate-pulse" />
                 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-slate-300 mb-3">Your Photo</p>
-                    <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-[3/4]">
-                      <img src={customerPhotoUrl} alt="You" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-300 mb-3">{result.ai_image ? 'AI Visualization' : 'Product'}</p>
-                    <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-[3/4] flex items-center justify-center">
+                {/* Mirror Frame */}
+                <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2.5rem] p-8 border-4 border-violet-500/30 shadow-2xl">
+                  {/* Corner Decorations */}
+                  <div className="absolute top-4 left-4 w-12 h-12 border-t-4 border-l-4 border-violet-400 rounded-tl-2xl" />
+                  <div className="absolute top-4 right-4 w-12 h-12 border-t-4 border-r-4 border-fuchsia-400 rounded-tr-2xl" />
+                  <div className="absolute bottom-4 left-4 w-12 h-12 border-b-4 border-l-4 border-purple-400 rounded-bl-2xl" />
+                  <div className="absolute bottom-4 right-4 w-12 h-12 border-b-4 border-r-4 border-violet-400 rounded-br-2xl" />
+
+                  {/* Scanning Lines Effect */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/10 to-transparent rounded-[2rem]"
+                    animate={{ y: ['-100%', '200%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  />
+
+                  {/* Main Mirror Display */}
+                  <div className="relative bg-black/50 backdrop-blur-sm rounded-3xl overflow-hidden border border-violet-400/20">
+                    {/* Status Badge */}
+                    {result.ai_image && (
+                      <motion.div
+                        initial={{ x: -100, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                        className="absolute top-6 left-6 z-20 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center gap-2 shadow-lg"
+                      >
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        <span className="text-white font-semibold text-sm">AI Enhanced</span>
+                      </motion.div>
+                    )}
+
+                    {/* Product Info Badge */}
+                    <motion.div
+                      initial={{ x: 100, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="absolute top-6 right-6 z-20 px-4 py-2 bg-slate-900/80 backdrop-blur-sm rounded-full border border-violet-400/30"
+                    >
+                      <span className="text-violet-300 font-semibold text-sm">{result.product.name}</span>
+                    </motion.div>
+
+                    {/* Mirror Reflection - The Visualized Image */}
+                    <div className="relative aspect-[9/12] max-h-[70vh]">
                       {result.ai_image ? (
-                        <img src={result.ai_image} alt="Result" className="w-full h-full object-cover" />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 1.1 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.8 }}
+                          className="relative w-full h-full"
+                        >
+                          {/* Holographic Effect Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-fuchsia-500/5 pointer-events-none z-10" />
+                          
+                          {/* The AI Visualization Result */}
+                          <img 
+                            src={result.ai_image} 
+                            alt="Your Visualization" 
+                            className="w-full h-full object-cover"
+                          />
+                          
+                          {/* Shimmer Effect */}
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                            animate={{ x: ['-100%', '200%'] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "linear", delay: 1 }}
+                          />
+
+                          {/* Grid Overlay for Tech Feel */}
+                          <div className="absolute inset-0 opacity-10 pointer-events-none" 
+                               style={{
+                                 backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent)',
+                                 backgroundSize: '50px 50px'
+                               }}
+                          />
+                        </motion.div>
                       ) : (
-                        <img src={result.product.image_url} alt="Product" className="max-w-full max-h-full object-contain p-4" />
+                        // Fallback: Show product if AI failed
+                        <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                          <div className="text-center">
+                            <img 
+                              src={result.product.image_url} 
+                              alt="Product" 
+                              className="max-w-full max-h-[60vh] object-contain mx-auto mb-4"
+                            />
+                            <p className="text-slate-400">AI Processing Unavailable - Product Preview</p>
+                          </div>
+                        </div>
                       )}
                     </div>
+
+                    {/* Bottom Info Bar */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-violet-300 text-sm mb-1">Price</p>
+                          <p className="text-white text-2xl font-bold">₹{result.product.price?.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-violet-300 text-sm mb-1">Category</p>
+                          <p className="text-white font-semibold">{result.product.category}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Share */}
-              <div className="bg-slate-800/80 backdrop-blur-sm rounded-3xl border border-slate-700 p-8 text-center">
-                <h3 className="text-2xl font-semibold text-white mb-6">Share Your Experience</h3>
-                
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="bg-slate-800/50 backdrop-blur-sm rounded-3xl border border-slate-700 p-8"
+              >
                 <div className="flex flex-col items-center gap-6">
-                  <div className="bg-white p-4 rounded-2xl">
-                    <QRCodeSVG value={generateWhatsAppLink()} size={160} />
+                  {/* QR Code */}
+                  <div className="bg-white p-6 rounded-2xl shadow-xl">
+                    <QRCodeSVG value={generateWhatsAppLink()} size={140} />
                   </div>
-                  <p className="text-slate-300">Scan to share via WhatsApp</p>
+                  <p className="text-slate-300 text-center">Scan to share your virtual try-on via WhatsApp</p>
 
-                  <div className="flex gap-4">
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 w-full max-w-2xl">
                     <Button
                       onClick={() => window.open(generateWhatsAppLink(), '_blank')}
-                      className="h-14 px-8 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold"
+                      className="flex-1 h-16 px-8 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-lg font-semibold shadow-lg shadow-green-500/30"
                     >
-                      <Share2 className="w-5 h-5 mr-3" /> Share to WhatsApp
+                      <Share2 className="w-6 h-6 mr-3" /> Share to WhatsApp
                     </Button>
-                    <Button onClick={handleRestart} variant="outline" className="h-14 px-8 rounded-full border-slate-600 bg-slate-800/50 text-white text-lg hover:bg-slate-700">
-                      Try Again
+                    <Button 
+                      onClick={handleRestart} 
+                      variant="outline" 
+                      className="flex-1 h-16 px-8 rounded-2xl border-2 border-violet-500 bg-slate-800/50 text-white text-lg font-semibold hover:bg-violet-600 hover:border-violet-400 transition-all"
+                    >
+                      <Sparkles className="w-6 h-6 mr-3" /> Try Another Look
                     </Button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         )}
