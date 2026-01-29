@@ -544,19 +544,19 @@ export default function Kiosk() {
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="rounded-full h-12 px-6 border-slate-700 text-white">
+                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="rounded-full h-12 px-6 border-slate-600 bg-slate-800/50 text-white hover:bg-slate-700">
                     <SlidersHorizontal className="w-5 h-5 mr-2" /> Filters
                   </Button>
                   
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px] h-12 rounded-full border-slate-700 bg-transparent text-white">
+                    <SelectTrigger className="w-[180px] h-12 rounded-full border-slate-600 bg-slate-800/50 text-white hover:bg-slate-700">
                       <ArrowUpDown className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
-                      <SelectItem value="name">Name</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                      <SelectItem value="name" className="text-white hover:bg-slate-700">Name</SelectItem>
+                      <SelectItem value="price-low" className="text-white hover:bg-slate-700">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high" className="text-white hover:bg-slate-700">Price: High to Low</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
