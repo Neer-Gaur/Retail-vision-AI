@@ -242,13 +242,38 @@ export default function Dashboard() {
       <header className="glass sticky top-0 z-40 border-b border-slate-200/50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
+            <div className="flex items-center gap-5">
+              <motion.div 
+                initial={{ scale: 0.9, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                className="relative"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-lg">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                </div>
+              </motion.div>
               <div>
-                <h1 className="text-2xl font-bold">{shop?.shop_name}</h1>
-                <p className="text-sm text-slate-600 capitalize">{shop?.industry} Store</p>
+                <motion.h1 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-2xl font-bold bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent"
+                >
+                  {shop?.shop_name}
+                </motion.h1>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    shop?.industry === 'fashion' 
+                      ? 'bg-pink-100 text-pink-700' 
+                      : 'bg-cyan-100 text-cyan-700'
+                  }`}>
+                    {shop?.industry === 'fashion' ? '👗 Fashion' : '🏠 Tiles'}
+                  </span>
+                  <span className="text-xs text-slate-500">•</span>
+                  <span className="text-xs text-slate-500">{shop?.owner_email}</span>
+                </div>
               </div>
             </div>
             
