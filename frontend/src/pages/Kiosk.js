@@ -885,6 +885,17 @@ export default function Kiosk() {
                                    }}
                               />
                             </motion.div>
+                          ) : result.status === 'processing' ? (
+                            // Show loading animation while AI is processing
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900">
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                className="w-20 h-20 rounded-full border-4 border-violet-500/30 border-t-violet-500 mb-6"
+                              />
+                              <p className="text-violet-300 text-lg font-semibold mb-2">AI Processing...</p>
+                              <p className="text-slate-400 text-sm">Creating your visualization</p>
+                            </div>
                           ) : (
                             // Fallback: Show product if AI failed
                             <div className="w-full h-full flex items-center justify-center bg-slate-900">
