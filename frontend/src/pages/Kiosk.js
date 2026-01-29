@@ -615,27 +615,27 @@ export default function Kiosk() {
                     onClick={() => setSelectedProduct(product)}
                     whileHover={{ y: -4 }}
                     whileTap={{ scale: 0.98 }}
-                    className={`relative cursor-pointer rounded-2xl overflow-hidden bg-slate-900/50 border-2 transition-all ${
+                    className={`relative cursor-pointer rounded-2xl overflow-hidden bg-slate-800/80 backdrop-blur-sm border-2 transition-all ${
                       selectedProduct?.id === product.id 
-                        ? 'border-violet-500 ring-4 ring-violet-500/20' 
-                        : 'border-slate-800 hover:border-slate-700'
+                        ? 'border-violet-500 ring-4 ring-violet-500/30 shadow-xl shadow-violet-500/20' 
+                        : 'border-slate-700 hover:border-slate-600 hover:shadow-lg'
                     }`}
                   >
-                    <div className="aspect-square bg-slate-800/50 flex items-center justify-center">
+                    <div className="aspect-square bg-white/5 flex items-center justify-center">
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain p-4" />
                       ) : (
-                        <Eye className="w-16 h-16 text-slate-700" />
+                        <Eye className="w-16 h-16 text-slate-600" />
                       )}
                     </div>
                     {selectedProduct?.id === product.id && (
-                      <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center">
+                      <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg">
                         <Check className="w-6 h-6 text-white" />
                       </div>
                     )}
-                    <div className="p-4">
-                      <h3 className="font-semibold truncate">{product.name}</h3>
-                      <p className="text-sm text-slate-400 mb-2">{product.category}</p>
+                    <div className="p-4 bg-slate-900/50">
+                      <h3 className="font-semibold text-white truncate">{product.name}</h3>
+                      <p className="text-sm text-slate-300 mb-2">{product.category}</p>
                       <p className="text-lg font-bold text-violet-400">₹{product.price?.toLocaleString('en-IN')}</p>
                     </div>
                   </motion.div>
