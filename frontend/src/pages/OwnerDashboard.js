@@ -409,8 +409,8 @@ export default function OwnerDashboard() {
                         <Label className="text-slate-700 font-medium">Product Image</Label>
                         <div className="mt-2">
                           {formData.image && (
-                            <div className="mb-3 relative">
-                              <img src={formData.image} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
+                            <div className="mb-3 relative h-48 bg-white border border-slate-200 rounded-xl flex items-center justify-center">
+                              <img src={formData.image} alt="Preview" className="max-w-full max-h-full object-contain p-2" />
                             </div>
                           )}
                           <Button
