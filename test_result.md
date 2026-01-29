@@ -187,7 +187,7 @@
 
   - task: "Kiosk Mode"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/pages/Kiosk.js"
     stuck_count: 1
     priority: "high"
@@ -202,6 +202,9 @@
         - working: false
           agent: "testing"
           comment: "❌ Kiosk mode still has critical issues. Navigation to /kiosk works, but 'Permissions check failed' error overlay blocks functionality. Lead capture form elements detected but form interaction blocked by overlay. This is a development environment issue that needs resolution."
+        - working: true
+          agent: "testing"
+          comment: "✅ OVERLAY FIX VERIFIED: Kiosk mode now fully functional when accessed via dashboard Launch Kiosk Mode button. Lead capture form displays correctly with 'Welcome to Arun Vastralya' message, name and WhatsApp inputs are fully interactive, Continue button accessible. No error overlays detected. Direct URL access shows login (expected for protected route). All form interactions working perfectly."
 
   - task: "Analytics Dashboard"
     implemented: true
