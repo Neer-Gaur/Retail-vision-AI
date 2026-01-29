@@ -696,13 +696,13 @@ export default function Kiosk() {
           >
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-2">Your Visualization</h2>
-                <p className="text-slate-400">See how {result.product.name} looks on you</p>
+                <h2 className="text-4xl font-bold text-white mb-2">Your Visualization</h2>
+                <p className="text-slate-300">See how {result.product.name} looks on you</p>
               </div>
 
-              <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 mb-8">
+              <div className="bg-slate-800/80 backdrop-blur-sm rounded-3xl border border-slate-700 p-6 mb-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-semibold">{result.product.name}</h3>
+                  <h3 className="text-2xl font-semibold text-white">{result.product.name}</h3>
                   {result.ai_image && (
                     <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium">AI Generated</span>
                   )}
@@ -710,14 +710,14 @@ export default function Kiosk() {
                 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-slate-400 mb-3">Your Photo</p>
-                    <div className="rounded-2xl overflow-hidden bg-slate-800 aspect-[3/4]">
+                    <p className="text-sm text-slate-300 mb-3">Your Photo</p>
+                    <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-[3/4]">
                       <img src={customerPhotoUrl} alt="You" className="w-full h-full object-cover" />
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-400 mb-3">{result.ai_image ? 'AI Visualization' : 'Product'}</p>
-                    <div className="rounded-2xl overflow-hidden bg-slate-800 aspect-[3/4] flex items-center justify-center">
+                    <p className="text-sm text-slate-300 mb-3">{result.ai_image ? 'AI Visualization' : 'Product'}</p>
+                    <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-[3/4] flex items-center justify-center">
                       {result.ai_image ? (
                         <img src={result.ai_image} alt="Result" className="w-full h-full object-cover" />
                       ) : (
@@ -729,14 +729,14 @@ export default function Kiosk() {
               </div>
 
               {/* Share */}
-              <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-8 text-center">
-                <h3 className="text-2xl font-semibold mb-6">Share Your Experience</h3>
+              <div className="bg-slate-800/80 backdrop-blur-sm rounded-3xl border border-slate-700 p-8 text-center">
+                <h3 className="text-2xl font-semibold text-white mb-6">Share Your Experience</h3>
                 
                 <div className="flex flex-col items-center gap-6">
                   <div className="bg-white p-4 rounded-2xl">
                     <QRCodeSVG value={generateWhatsAppLink()} size={160} />
                   </div>
-                  <p className="text-slate-400">Scan to share via WhatsApp</p>
+                  <p className="text-slate-300">Scan to share via WhatsApp</p>
 
                   <div className="flex gap-4">
                     <Button
@@ -745,7 +745,7 @@ export default function Kiosk() {
                     >
                       <Share2 className="w-5 h-5 mr-3" /> Share to WhatsApp
                     </Button>
-                    <Button onClick={handleRestart} variant="outline" className="h-14 px-8 rounded-full border-slate-700 text-white text-lg">
+                    <Button onClick={handleRestart} variant="outline" className="h-14 px-8 rounded-full border-slate-600 bg-slate-800/50 text-white text-lg hover:bg-slate-700">
                       Try Again
                     </Button>
                   </div>
