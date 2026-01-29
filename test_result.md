@@ -154,8 +154,8 @@
 
   - task: "Owner Dashboard"
     implemented: true
-    working: false
-    file: "/app/frontend/src/pages/Dashboard.js"
+    working: true
+    file: "/app/frontend/src/pages/DashboardHome.jsx"
     stuck_count: 1
     priority: "high"
     needs_retesting: false
@@ -166,6 +166,9 @@
         - working: false
           agent: "testing"
           comment: "❌ Dashboard has critical runtime errors: 'Monitor is not defined' and 'Permissions check failed'. Error overlay visible preventing proper functionality. Navigation works but core dashboard features broken."
+        - working: true
+          agent: "testing"
+          comment: "✅ CRITICAL FIX VERIFIED: Monitor icon import added to DashboardHome.jsx. Dashboard loads without runtime errors, all stats cards display (4 found), Quick Actions section working with Launch Kiosk Mode button functional, Activity chart renders properly (22 SVG elements), navigation between dashboard sections working perfectly. No console errors detected."
 
   - task: "Inventory Management"
     implemented: true
