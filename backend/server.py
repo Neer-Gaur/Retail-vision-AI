@@ -138,7 +138,9 @@ Generate the visualization image now."""
             return VisualizationResult(
                 product_name=product_name,
                 result_image=result_image,
-                status="success"
+                status="success",
+                model="Google Gemini",
+                description=text_response[:200] if text_response else None
             )
         else:
             return VisualizationResult(
