@@ -95,6 +95,13 @@ export default function KioskMode() {
       item.price >= priceRange[0] && item.price <= priceRange[1]
     );
 
+    // Category filter
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(item =>
+        selectedCategories.includes(item.category)
+      );
+    }
+
     // Tags filter
     if (selectedTags.length > 0) {
       filtered = filtered.filter(item =>
