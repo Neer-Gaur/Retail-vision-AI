@@ -1,0 +1,93 @@
+{
+  "timestamp": "2026-01-29T15:13:53.129325",
+  "total_tests": 17,
+  "passed_tests": 14,
+  "success_rate": "82.4%",
+  "test_details": [
+    {
+      "test": "Founder Signup",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Owner Signup",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Login - Invalid Credentials Rejection",
+      "success": false,
+      "details": "Should return 401"
+    },
+    {
+      "test": "Inventory - Create Item",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Inventory - Get All Items",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Inventory - Kiosk Filter (Stock > 0)",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Inventory - Update Item",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Inventory - Delete Item",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Leads - Create Lead",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Leads - Get All Leads",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "AI Visualization - Mock Response",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Kiosk PIN - Correct PIN",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Kiosk PIN - Incorrect PIN Rejection",
+      "success": false,
+      "details": "Should return 401"
+    },
+    {
+      "test": "Founder - Get Tenants List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Founder - Analytics Access",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Owner - Analytics Access",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Tenant Isolation - Owner Cannot Access Tenants",
+      "success": false,
+      "details": "Should return 403"
+    }
+  ]
+}
