@@ -569,23 +569,23 @@ export default function Kiosk() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 mb-8 overflow-hidden"
+                    className="bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-8 overflow-hidden"
                   >
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold">Filters</h3>
-                      <Button onClick={resetFilters} variant="ghost" className="text-sm text-slate-400">Reset All</Button>
+                      <h3 className="text-xl font-semibold text-white">Filters</h3>
+                      <Button onClick={resetFilters} variant="ghost" className="text-sm text-slate-300 hover:text-white">Reset All</Button>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <Label className="text-sm text-slate-400 mb-4 block">
+                        <Label className="text-sm text-slate-300 mb-4 block">
                           Price: ₹{priceRange[0].toLocaleString('en-IN')} - ₹{priceRange[1].toLocaleString('en-IN')}
                         </Label>
                         <Slider min={0} max={maxPrice} step={100} value={priceRange} onValueChange={setPriceRange} />
                       </div>
                       
                       <div>
-                        <Label className="text-sm text-slate-400 mb-4 block">Categories</Label>
+                        <Label className="text-sm text-slate-300 mb-4 block">Categories</Label>
                         <div className="flex flex-wrap gap-2">
                           {getAllCategories().map(cat => (
                             <button
@@ -594,7 +594,7 @@ export default function Kiosk() {
                                 prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
                               )}
                               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                selectedCategories.includes(cat) ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
+                                selectedCategories.includes(cat) ? 'bg-violet-600 text-white' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                               }`}
                             >
                               {cat}
