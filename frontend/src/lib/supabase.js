@@ -59,7 +59,9 @@ export const uploadImage = async (file, bucket = 'inventory-images') => {
 
 // Upload base64 image to storage
 export const uploadBase64Image = async (base64Data, bucket = 'customer-uploads') => {
-  const base64Content = base64Data.split(',')[1];
+  // Handle both data URLs and raw base64
+  const base64Content = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+  
   const byteCharacters = atob(base64Content);
   const byteNumbers = new Array(byteCharacters.length);
   for (let i = 0; i < byteCharacters.length; i++) {
@@ -73,7 +75,8 @@ export const uploadBase64Image = async (base64Data, bucket = 'customer-uploads')
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(fileName, blob, {
-      contentType: 'image/jpeg'
+      contentType: 'image/jpeg',
+      upsert: true
     });
 
   if (error) throw error;
