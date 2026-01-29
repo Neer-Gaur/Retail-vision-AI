@@ -79,6 +79,14 @@ export default function KioskMode() {
     return Array.from(tags);
   };
 
+  const getAllCategories = () => {
+    const categories = new Set();
+    inventory.forEach(item => {
+      if (item.category) categories.add(item.category);
+    });
+    return Array.from(categories);
+  };
+
   const applyFiltersAndSort = () => {
     let filtered = [...inventory];
 
