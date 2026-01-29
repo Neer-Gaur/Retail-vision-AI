@@ -22,7 +22,7 @@ const TILE_CATEGORIES = ['Floor Tiles', 'Wall Tiles', 'Bathroom Tiles', 'Kitchen
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { shop, signOut } = useAuthStore();
+  const { shop, signOut, refreshShop, user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('inventory');
   
   // Inventory State
@@ -51,6 +51,13 @@ export default function Dashboard() {
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
 
   const categories = shop?.industry === 'fashion' ? FASHION_CATEGORIES : TILE_CATEGORIES;
+
+  // Refresh shop data if not loaded
+  useEffect(() => {
+    if (user && !shop) {
+      refreshShop();
+    }
+  }, [user, shop, refreshShop]);
 
   useEffect(() => {
     if (shop?.id) {
