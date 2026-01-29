@@ -241,10 +241,8 @@
 
 ## test_plan:
   current_focus:
-    - "Owner Dashboard"
     - "Kiosk Mode"
   stuck_tasks:
-    - "Owner Dashboard"
     - "Kiosk Mode"
   test_all: false
   test_priority: "stuck_first"
