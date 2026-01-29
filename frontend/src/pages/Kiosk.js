@@ -337,7 +337,7 @@ export default function Kiosk() {
   const overlayType = shop?.industry === 'fashion' ? 'silhouette' : 'grid';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 relative">
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative">
       {/* Logo for Exit */}
       <motion.div
         ref={logoRef}
