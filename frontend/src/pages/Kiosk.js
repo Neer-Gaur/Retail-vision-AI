@@ -379,7 +379,7 @@ export default function Kiosk() {
 
   return (
     <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative">
-      {/* Logo for Exit */}
+      {/* Logo for Exit (Admin) */}
       <motion.div
         ref={logoRef}
         onMouseDown={handleLogoMouseDown}
@@ -402,6 +402,19 @@ export default function Kiosk() {
           </div>
         )}
       </motion.div>
+
+      {/* Exit Session Button (Customer) - Show only after lead capture */}
+      {step !== 'lead' && (
+        <motion.button
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={handleExitSession}
+          className="absolute top-6 right-6 z-50 px-4 py-2 rounded-full bg-red-500/90 hover:bg-red-600 backdrop-blur-sm border border-red-400/30 flex items-center gap-2 shadow-lg transition-all"
+        >
+          <LogOut className="w-5 h-5 text-white" />
+          <span className="text-white font-semibold">Exit Session</span>
+        </motion.button>
+      )}
 
       <AnimatePresence mode="wait">
         {/* STEP 1: Lead Capture */}
