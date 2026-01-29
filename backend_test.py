@@ -11,7 +11,7 @@ from datetime import datetime
 import time
 
 class RetailVisionAPITester:
-    def __init__(self, base_url="https://shopvision-5.preview.emergentagent.com"):
+    def __init__(self, base_url="https://smooth-login-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.founder_token = None
