@@ -179,7 +179,7 @@ export default function OwnerDashboard() {
     }
   };
 
-  const itemLabel = industry === 'fashion' ? 'Saree' : 'Tile';
+  const categories = industry === 'fashion' ? FASHION_CATEGORIES : TILES_CATEGORIES;
 
   // Prepare chart data
   const dailyData = analytics ? Object.keys(analytics.daily_visualizations || {}).map(date => ({
