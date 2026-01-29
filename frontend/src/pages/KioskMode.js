@@ -40,6 +40,7 @@ export default function KioskMode() {
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [sortBy, setSortBy] = useState('name');
   const [maxPrice, setMaxPrice] = useState(1000);
 
