@@ -893,10 +893,16 @@ export default function Kiosk() {
                             initial={{ x: -100, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             transition={{ delay: 0.5 }}
-                            className="absolute top-4 left-4 z-20 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center gap-2 shadow-lg"
+                            className={`absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg ${
+                              result.preview_mode 
+                                ? 'bg-gradient-to-r from-orange-500 to-amber-500' 
+                                : 'bg-gradient-to-r from-emerald-500 to-green-500'
+                            }`}
                           >
                             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            <span className="text-white font-semibold text-xs">AI Enhanced</span>
+                            <span className="text-white font-semibold text-xs">
+                              {result.preview_mode ? 'Preview Mode' : 'AI Enhanced'}
+                            </span>
                           </motion.div>
                         )}
 
