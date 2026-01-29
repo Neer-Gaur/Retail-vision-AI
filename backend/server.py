@@ -58,7 +58,7 @@ async def generate_visualization(
     product_name: str,
     industry: str
 ) -> VisualizationResult:
-    """Generate AI visualization using Nano Banana"""
+    """Generate AI visualization using Google Gemini Image Generation"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
