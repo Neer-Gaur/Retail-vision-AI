@@ -410,7 +410,7 @@ export default function OwnerDashboard() {
                         <div className="mt-2">
                           {formData.image && (
                             <div className="mb-3 relative">
-                              <img src={formData.image} alt="Preview" className="w-full h-48 object-contain rounded-xl border border-slate-200 bg-slate-50" />
+                              <img src={formData.image} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
                             </div>
                           )}
                           <Button
