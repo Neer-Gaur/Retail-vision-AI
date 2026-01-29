@@ -422,7 +422,7 @@ export default function KioskMode() {
 
               <div className="flex flex-col items-center gap-4 mb-8">
                 <div data-testid="whatsapp-qr" className="bg-white p-4 rounded-xl">
-                  <QRCode value={generateWhatsAppLink()} size={200} />
+                  <QRCodeSVG value={generateWhatsAppLink()} size={200} />
                 </div>
                 <p className="text-gray-400 text-center">Scan to share via WhatsApp</p>
 
