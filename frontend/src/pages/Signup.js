@@ -1,61 +1,55 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Store, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { authAPI } from '@/services/api';
+import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [shopName, setShopName] = useState('');
-  const [industry, setIndustry] = useState('fashion');
-  const [adminPin, setAdminPin] = useState('1234');
+  const signUp = useAuthStore((state) => state.signUp);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    shop_name: '',
+    industry: 'fashion',
+    admin_pin: '1234'
+  });
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const data = {
-        email,
-        password,
-        role: 'owner',
-        shop_name: shopName,
-        industry: industry,
-        admin_pin: adminPin
-      };
-
-      const response = await authAPI.signup(data);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('role', response.role);
-      localStorage.setItem('tenant_id', response.tenant_id || '');
-      localStorage.setItem('industry', response.industry || '');
-
-      toast.success('Account created successfully!');
+      await signUp(formData.email, formData.password, {
+        shop_name: formData.shop_name,
+        industry: formData.industry,
+        admin_pin: formData.admin_pin
+      });
+      toast.success('Account created! Check your email to verify.');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Signup failed');
+      toast.error(error.message || 'Signup failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex items-center justify-center p-6 noise-bg">
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="fixed inset-0 gradient-mesh opacity-40 -z-10" />
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <Button
-          data-testid="back-to-home-btn"
           onClick={() => navigate('/')}
           variant="ghost"
           className="mb-8 rounded-full"
@@ -64,92 +58,119 @@ export default function Signup() {
           Back to Home
         </Button>
 
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-soft p-8">
-          <div className="flex items-center gap-3 mb-8">
-            <Eye className="w-8 h-8 text-black" />
-            <h1 className="text-3xl font-bold">Create Your Account</h1>
+        <div className="glass rounded-3xl p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">Create Your Shop</h1>
+            <p className="text-slate-600">Start your AI-powered journey</p>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <Label htmlFor="shopName" className="text-sm text-slate-700 mb-2 block font-medium">
-                Shop Name
-              </Label>
-              <Input
-                data-testid="signup-shopname-input"
-                id="shopName"
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                required
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email" className="text-sm text-slate-700 mb-2 block font-medium">
-                Email
-              </Label>
-              <Input
-                data-testid="signup-email-input"
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password" className="text-sm text-slate-700 mb-2 block font-medium">
-                Password
-              </Label>
-              <Input
-                data-testid="signup-password-input"
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
-              />
-            </div>
-
-            <div>
-              <Label className="text-sm text-slate-700 mb-3 block font-medium">Industry</Label>
-              <RadioGroup value={industry} onValueChange={setIndustry} className="space-y-3">
-                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-                  <RadioGroupItem data-testid="industry-fashion" value="fashion" id="fashion" />
-                  <Label htmlFor="fashion" className="cursor-pointer flex-1">Fashion</Label>
+              <Label className="text-sm font-medium mb-3 block">Industry Type</Label>
+              <RadioGroup 
+                value={formData.industry} 
+                onValueChange={(value) => setFormData({ ...formData, industry: value })}
+                className="grid grid-cols-2 gap-4"
+              >
+                <div>
+                  <RadioGroupItem value="fashion" id="fashion" className="peer sr-only" />
+                  <Label
+                    htmlFor="fashion"
+                    className="flex flex-col items-center justify-between rounded-xl border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 peer-data-[state=checked]:border-violet-600 peer-data-[state=checked]:bg-violet-50 cursor-pointer transition-all"
+                  >
+                    <Store className="w-6 h-6 mb-2" />
+                    <span className="text-sm font-semibold">Fashion</span>
+                  </Label>
                 </div>
-                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-                  <RadioGroupItem data-testid="industry-tiles" value="tiles" id="tiles" />
-                  <Label htmlFor="tiles" className="cursor-pointer flex-1">Tiles</Label>
+                <div>
+                  <RadioGroupItem value="tiles" id="tiles" className="peer sr-only" />
+                  <Label
+                    htmlFor="tiles"
+                    className="flex flex-col items-center justify-between rounded-xl border-2 border-slate-200 bg-white p-4 hover:bg-slate-50 peer-data-[state=checked]:border-violet-600 peer-data-[state=checked]:bg-violet-50 cursor-pointer transition-all"
+                  >
+                    <Store className="w-6 h-6 mb-2" />
+                    <span className="text-sm font-semibold">Tiles</span>
+                  </Label>
                 </div>
               </RadioGroup>
             </div>
 
             <div>
-              <Label htmlFor="adminPin" className="text-sm text-slate-700 mb-2 block font-medium">
+              <Label htmlFor="shop_name" className="text-sm font-medium mb-2 block">
+                Shop Name
+              </Label>
+              <div className="relative">
+                <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  id="shop_name"
+                  value={formData.shop_name}
+                  onChange={(e) => setFormData({ ...formData, shop_name: e.target.value })}
+                  required
+                  className="h-14 pl-12 rounded-xl bg-white border-slate-200"
+                  placeholder="My Awesome Shop"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium mb-2 block">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  className="h-14 pl-12 rounded-xl bg-white border-slate-200"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="password" className="text-sm font-medium mb-2 block">
+                Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  className="h-14 pl-12 rounded-xl bg-white border-slate-200"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="admin_pin" className="text-sm font-medium mb-2 block">
                 Kiosk Exit PIN (4 digits)
               </Label>
-              <Input
-                data-testid="signup-pin-input"
-                id="adminPin"
-                type="text"
-                maxLength="4"
-                value={adminPin}
-                onChange={(e) => setAdminPin(e.target.value)}
-                required
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
-              />
+              <div className="relative">
+                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Input
+                  id="admin_pin"
+                  type="text"
+                  maxLength="4"
+                  value={formData.admin_pin}
+                  onChange={(e) => setFormData({ ...formData, admin_pin: e.target.value })}
+                  required
+                  className="h-14 pl-12 rounded-xl bg-white border-slate-200"
+                  placeholder="1234"
+                />
+              </div>
             </div>
 
             <Button
-              data-testid="signup-submit-btn"
               type="submit"
               disabled={loading}
-              className="btn-primary w-full"
+              className="w-full h-14 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
@@ -158,11 +179,10 @@ export default function Signup() {
           <p className="text-center text-slate-600 mt-6">
             Already have an account?{' '}
             <button
-              data-testid="go-to-login-btn"
               onClick={() => navigate('/login')}
-              className="text-black font-semibold hover:underline"
+              className="text-violet-600 font-semibold hover:underline"
             >
-              Login
+              Sign in
             </button>
           </p>
         </div>
