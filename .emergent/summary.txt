@@ -1,0 +1,171 @@
+<analysis>**original_problem_statement:**
+The user wants to build Retail-Vision AI, a multi-tenant SaaS platform for Saree and Tile showrooms.
+
+**PRODUCT REQUIREMENTS:**
+-   **Branding & Access:**
+    -   Premium, dark-themed Landing Page.
+    -   Unified Login for Founder (God-View) and Shop Owner (Admin).
+    -   Founder Dashboard to manage all tenants and monitor metrics.
+-   **Owner Dashboard:**
+    -   Industry Toggle on signup ('Fashion' or 'Tiles') to adapt the UI.
+    -   Advanced Inventory Manager with fields: Image, Name, Category, Price, Tags, and Live Stock Count.
+    -   Items with 0 stock should be hidden from the public view.
+    -   Analytics Hub showing Most Visualized Products, Customer Leads, and Peak Usage Hours.
+-   **Kiosk Mode:**
+    -   A Launch Kiosk button in the Owner Dashboard for a fullscreen, locked-down mode.
+    -   The Kiosk must hide all navigation, headers, and footers.
+    -   A hidden exit mechanism: a 5-second long-press on the Shop Logo, followed by a 4-digit PIN (default: 1234).
+-   **Customer Journey:**
+    -   Mandatory Lead Capture (Name, WhatsApp) before browsing.
+    -   Smart camera overlays (Human Silhouette for Fashion, Perspective Grid for Tiles).
+    -   Background photo upload to reduce wait times.
+    -   A comparison engine for up to 3 items.
+    -   A 3-panel Visualization Reveal showing Original vs. AI Results.
+-   **Technical & Handoff:**
+    -   Fully responsive layout for a 43-inch Vertical Kiosk, Tablet, and Desktop.
+    -   Centralize API logic and use Tenant IDs for data isolation.
+    -   Include placeholders for WhatsApp API, Email, and QR Code generation.
+    -   The captured WhatsApp number must be available on the final page.
+
+**User's preferred language**: English
+
+**what currently exists?**
+The project is in the middle of a complete architectural rewrite. The original FastAPI + MongoDB stack has been deprecated at the user's request. A new frontend-only application using **React + Supabase** is being built.
+
+The new structure includes:
+-   Supabase client configured with the user's provided credentials in .
+-   New React components for key pages:  (routing), , , , and .
+-   Dependencies like , , and  have been installed.
+-   The previous FastAPI backend code still exists in  but is no longer used or maintained.
+
+**Last working item**:
+-   **Last item agent was working:** The agent was executing a complete application rewrite from a FastAPI+MongoDB architecture to a pure React frontend with Supabase as the Backend-as-a-Service (BaaS). The very last action was successfully creating the new dashboard page at .
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** frontend testing agent (After the rewrite is complete, to validate the full application flow). Screenshots can be used for visual verification of each page as it's built.
+-   **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+There are no issues in the traditional sense. The entire project is one large in-progress task due to the architectural rewrite. All previous bugs from the old stack are now obsolete.
+
+**In progress Task List**:
+-   **Task 1: Complete the React + Supabase Application Rewrite (P0)**
+    -   **Where to resume:** The agent has created the basic page files. The next step is to flesh out these components with full functionality, starting with  and then creating .
+    -   **What will be achieved with this?** A fully functional, multi-tenant SaaS application on the new, user-requested architecture, replacing the old FastAPI backend.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Frontend. The backend is Supabase, so testing involves verifying API calls from the frontend to Supabase services.
+    -   **Blocked on something:** No.
+
+**Upcoming and Future Tasks**
+
+**Upcoming Tasks (Core Rewrite Implementation):**
+-   **P0: Implement Full Dashboard Functionality ():**
+    -   **Inventory Management:** Implement full CRUD functionality for the  table, including image uploads to the  Supabase storage bucket. The form must use a category dropdown.
+    -   **Analytics Hub:** Fetch data from  and  tables and display it using  graphs.
+    -   **Kiosk Launch:** Add the Launch Kiosk button to transition the application state.
+-   **P0: Create and Implement Kiosk Mode ():**
+    -   Build the futuristic, locked-down UI.
+    -   Implement the lead capture form, saving data to the  table.
+    -   Implement camera access and photo upload to the  bucket.
+    -   Build the inventory gallery with filters (category, price, tags) and sorting.
+    -   Implement the hidden exit mechanism (long-press + PIN check against ).
+-   **P0: Implement AI Visualization Flow:**
+    -   Create a Supabase Edge Function to handle calls to the Nano Banana API using the .
+    -   The function should construct a detailed prompt to preserve the user's face/body while applying the selected clothing/tile.
+    -   The frontend  will invoke this Edge Function.
+    -   Save results to the  table.
+-   **P0: Finalize Authentication and RLS:**
+    -   Ensure all Supabase data queries are protected by Row-Level Security policies in the Supabase dashboard.
+    -   Confirm that the frontend code correctly handles user sessions and passes authentication tokens for all data-related requests.
+
+**Future Tasks (Post-Rewrite Polish):**
+-   **P1: WhatsApp & QR Code Integration:** On the final visualization page, add a Share to WhatsApp link and generate a QR code for the result image.
+-   **P2: Responsive Design Polish:** Conduct a thorough review and refinement of the app's responsiveness, specifically targeting a 43-inch vertical kiosk, tablet, and standard desktop displays.
+
+**Completed work in this session**
+The following work was completed on the **previous, now-deprecated FastAPI/MongoDB stack**:
+-   Built an initial full-stack application with a dark theme.
+-   Redesigned the entire application to a modern white luxury theme.
+-   Implemented image uploads, analytics endpoints, and user management features.
+-   Integrated a mock AI service, then replaced it with the Gemini Nano Banana API.
+-   Iteratively refined the UI based on user feedback regarding image cropping, currency symbols, and filters.
+-   Redesigned the Kiosk Mode UI and improved the AI prompting logic.
+-   **Most recently, started a complete architectural rewrite to a React + Supabase stack.**
+
+**Earlier issues found/mentioned but not fixed**
+All issues from the previous FastAPI/MongoDB implementation are now considered obsolete due to the complete architectural pivot to Supabase.
+
+**Code Architecture**
+-   **Current (In-Progress) Architecture:**
+    -   **Frontend:** React ()
+        -   : Initializes and exports the Supabase client.
+        -   : Contains all page-level components (, , , etc.).
+        -   : To be used for shared, reusable components.
+        -   : Handles top-level routing.
+    -   **Backend:** Supabase (Backend-as-a-Service)
+        -   **Database:** PostgreSQL
+        -   **Auth:** Supabase Auth
+        -   **Storage:** Supabase Storage (for images)
+        -   **Edge Functions:** For server-side logic (e.g., calling third-party AI APIs).
+
+**Key Technical Concepts**
+-   **Frontend:** React, React Router, Tailwind CSS, Framer Motion, Recharts.
+-   **Backend/BaaS:** Supabase (PostgreSQL Database, Auth, Storage, Edge Functions).
+-   **Architecture:** Multi-Tenant SaaS, Serverless (via Supabase).
+-   **Integrations:** Gemini Nano Banana (planned via Supabase Edge Function).
+
+**key DB schema**
+-   ****: 
+-   ****: 
+-   ****: 
+-   ****: 
+
+**changes in tech stack**
+-   **Massive Change:** The entire backend has been migrated from a self-hosted **FastAPI + MongoDB** stack to **Supabase** (PostgreSQL, Storage, Auth, Edge Functions). The application is now a pure React frontend interacting with Supabase services.
+
+**All files of reference**
+-   : **CRITICAL**. Contains the configuration for the Supabase client.
+-   : **CRITICAL**. Stores the Supabase URL and anonymous key.
+-   : Defines the application's routes.
+-   : Directory containing all new page components for the Supabase rewrite.
+-   : **DEPRECATED**. The old FastAPI server file.
+
+**Critical Info for New Agent**
+-   **STOP & READ:** The project has undergone a complete architectural rewrite. **Do not refer to or use any code from  or the old React components.** Your mission is to complete the new React application using Supabase as the backend.
+-   **Supabase is the Backend:** All data, authentication, and file storage operations must be done via the Supabase client initialized in .
+-   **User Credentials are Live:** The Supabase project URL and anon key provided by the user are already configured.
+-   **Multi-Tenancy is Mandatory:** All Supabase queries must be built with Row-Level Security in mind. Data for , , and  must be associated with a .
+-   **Image Storage:** Use the two specified Supabase buckets:  and .
+-   **AI Logic:** The plan is to use a Supabase Edge Function to call the Nano Banana API. You will need to create this function.
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User:** how can I remove emails that are already exisits
+2.  **User:** Delete all users for no and I am still not able to see the dashboard changes you have made and the analytics changes. Make sure you have done the changes
+3.  **User:** while uplaoding the product image in the inventory the image is shwoing cropped in the inventory section cards. Make sure the image uploaded will show full in the cards in the inventory
+4.  **User:** Instead of showing grey corners can you implement logic like when uploading the photo of the item our app itself create the photo in the aspect ration in which it will fit in the card without cropping and without showing grey corners. Also In the form of uplaoding tems in inventory the category shoule be a dropdown of categories in fashion like saree suit lehnga jeans top etc, and the add item shopuld not show add saree it should show add items. The shop is not specific for saree it can be a garment shop also make this change in signup page where you have written saree instead of that we will use fashion
+5.  **User:** the image is still not fir use the previous logic for the image that is only looking good
+6.  **User:** And you havent made any change to the kisok UI after launching the kiosk the UI should look more elegant and cealn and modern luxury look. And inside the inventory we are showing in kiosk there should a filter button and a sort button filter will have al the filters like price range, material, etc. Based on the tags we are giving in item upload.
+7.  **User:** Also in the inventory page the image should be clear as uploaded on the item cards. The image is cropped when I am uplaoding it. We should fix the aspect ratio and the full image should be shown in the inventory card in both inventory page of owners dashboard and also in the kiosk mode inventory page.
+8.  **User:** Make the following changes 1 - Make the currency in rupees not in dollars for the price 2 - In the filter section in kiosk mode add category also that we are getting from items.
+9.  **User:** When clicking on vislaization in kisok mode after selcting the item from inventory and uploading the photo our backend should generate a prompt and send it to nano banana that the user uploaded photot the face will be the ame and the body typ will be same you just need to let the user wear the item selected from inventory and then return that result
+10. **User (PIVOTAL):** First thing - rewrite the whole app in react... For Database use this supabase and connect to it... followed by credentials and schema.
+11. **User:** Complete it. Also make sure the details will be captured in tables and we have 2 buckets created in supasbase inventory-images and customer-uploads. to store the images that customer uploads and inventory images. And finish the code
+12. **User:** Yes Go ahead
+
+**Project Health Check:**
+-   **Broken:** The entire application is currently broken and non-functional because it is in the middle of a complete architectural rewrite.
+-   **Mocked:** The AI visualization service was previously mocked on the old stack. On the new stack, it is not yet implemented but is planned to use a real API (Nano Banana).
+
+**3rd Party Integrations**
+-   **Supabase:** The core backend for the application. Uses user-provided keys.
+    -   Profile URL: 
+-   **Gemini Nano Banana (for Image Generation):** Planned for integration via a Supabase Edge Function. It will use the **Emergent LLM Key**.
+
+**Testing status**
+-   **Testing agent used after significant changes:** YES (on the previous, now-deprecated stack).
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** []
+-   **Known regressions:** The entire application is being rebuilt, so the concept of regression is not applicable until the new version is functional.
+
+**What agent forgot to execute**
+All previously forgotten or delayed tasks (like the Kiosk UI redesign) from the old stack are now part of the new rewrite. The main task is to ensure all features requested by the user throughout the entire history are implemented correctly in the new Supabase architecture. Nothing has been forgotten yet in the new rewrite, as it is just beginning.</analysis>
