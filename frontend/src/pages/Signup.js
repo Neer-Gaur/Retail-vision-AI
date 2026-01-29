@@ -120,7 +120,7 @@ export default function Signup() {
               <RadioGroup value={industry} onValueChange={setIndustry} className="space-y-3">
                 <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
                   <RadioGroupItem data-testid="industry-fashion" value="fashion" id="fashion" />
-                  <Label htmlFor="fashion" className="cursor-pointer flex-1">Fashion (Sarees)</Label>
+                  <Label htmlFor="fashion" className="cursor-pointer flex-1">Fashion</Label>
                 </div>
                 <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
                   <RadioGroupItem data-testid="industry-tiles" value="tiles" id="tiles" />
