@@ -75,10 +75,11 @@ Retail-Vision AI is a multi-tenant SaaS platform for Saree and Tile showrooms, e
 - Login with session persistence
 
 ### ✅ Owner Dashboard
+- **Shop Name Display**: Prominent gradient text with industry badge and status indicator
 - **Inventory Management**: Full CRUD for products
   - Image upload to Supabase Storage
   - Category dropdown (industry-specific)
-  - Price, stock count, tags
+  - Price (₹), stock count, tags
 - **Analytics Hub**: 
   - Visualizations over time chart
   - Most visualized products
@@ -98,6 +99,12 @@ Retail-Vision AI is a multi-tenant SaaS platform for Saree and Tile showrooms, e
 - Select up to 3 products for visualization
 - Hidden exit: 5-second long-press on logo + PIN verification
 - QR code and WhatsApp share link on results
+
+### ✅ AI Visualization (Nano Banana Integration)
+- Backend endpoint `/api/visualize` using Emergent LLM Key
+- Gemini Nano Banana model (`gemini-3-pro-image-preview`)
+- Industry-specific prompts (Fashion: virtual try-on, Tiles: room visualization)
+- Graceful fallback to product preview if AI fails
 
 ## Pending/Future Features
 
