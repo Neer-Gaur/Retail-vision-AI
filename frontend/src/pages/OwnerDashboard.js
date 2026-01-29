@@ -470,7 +470,7 @@ export default function OwnerDashboard() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>Price ($)</Label>
+                          <Label>Price (₹)</Label>
                           <Input
                             data-testid="item-price-input"
                             type="number"
