@@ -10,6 +10,7 @@ import httpx
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent
+# Load environment variables
 load_dotenv(ROOT_DIR / '.env')
 
 app = FastAPI(title="RetailVision AI API")
