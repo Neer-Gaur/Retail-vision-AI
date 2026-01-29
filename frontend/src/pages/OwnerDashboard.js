@@ -538,7 +538,7 @@ export default function OwnerDashboard() {
                         ))}
                       </div>
                       <div className="flex justify-between items-center mb-4">
-                        <span className="text-xl font-bold">${item.price}</span>
+                        <span className="text-xl font-bold">₹{item.price}</span>
                         <span className={`text-sm font-medium px-3 py-1 rounded-full ${item.stock > 5 ? 'bg-green-100 text-green-700' : item.stock > 0 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
                           Stock: {item.stock}
                         </span>
