@@ -83,7 +83,7 @@ class RetailVisionAPITester:
         print("\n🎨 Testing AI Visualization Endpoint Structure")
         
         # Test with missing data
-        response = self.make_request('POST', 'visualize', {})
+        response = self.make_request('POST', 'visualize', {}, timeout=10)
         
         if response and response.status_code == 422:
             self.log_test("Visualize - Missing Data Validation", True)
@@ -98,7 +98,7 @@ class RetailVisionAPITester:
             "industry": "fashion"
         }
         
-        response = self.make_request('POST', 'visualize', invalid_data)
+        response = self.make_request('POST', 'visualize', invalid_data, timeout=10)
         
         if response and response.status_code == 400:
             self.log_test("Visualize - Invalid URL Handling", True)
