@@ -273,15 +273,18 @@ export default function Kiosk() {
           const { uploadBase64Image } = await import('../lib/supabase');
           // Save the AI-generated visualization to the new visualized_uploads bucket
           visualizedImageUrl = await uploadBase64Image(aiResult.result_image, 'visualized_uploads');
+          console.log('Visualization saved to:', visualizedImageUrl);
           toast.success('Visualization created successfully!');
         } catch (uploadError) {
           console.error('Failed to upload visualization result:', uploadError);
-          toast.error('Failed to save visualization');
+          console.error('Upload error details:', uploadError.message);
+          toast.error(`Failed to save visualization: ${uploadError.message}`);
           // Fallback to using the base64 image directly
           visualizedImageUrl = aiResult.result_image;
         }
       } else {
-        toast.warning('AI generation failed, showing product preview');
+        console.log('AI Result:', aiResult);
+        toast.warning(`AI generation failed: ${aiResult?.error || 'Unknown error'}`);
       }
 
       // Save visualization record to database
