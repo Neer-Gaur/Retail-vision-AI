@@ -230,6 +230,57 @@ export default function Kiosk() {
     }
   };
 
+  // Client-side image preview generator (fallback when AI is unavailable)
+  const generateClientSidePreview = async (customerPhotoUrl, productImageUrl) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const customerImg = new Image();
+      customerImg.crossOrigin = 'anonymous';
+      
+      customerImg.onload = () => {
+        // Set canvas size to customer image size
+        canvas.width = customerImg.width;
+        canvas.height = customerImg.height;
+        
+        // Draw customer photo
+        ctx.drawImage(customerImg, 0, 0);
+        
+        // Load and overlay product image
+        const productImg = new Image();
+        productImg.crossOrigin = 'anonymous';
+        
+        productImg.onload = () => {
+          // Calculate product overlay position (center-bottom)
+          const productWidth = canvas.width * 0.6;
+          const productHeight = (productImg.height / productImg.width) * productWidth;
+          const x = (canvas.width - productWidth) / 2;
+          const y = canvas.height - productHeight - 50;
+          
+          // Apply semi-transparency for preview effect
+          ctx.globalAlpha = 0.7;
+          ctx.drawImage(productImg, x, y, productWidth, productHeight);
+          
+          // Add "Preview Mode" watermark
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = 'rgba(139, 92, 246, 0.9)';
+          ctx.font = 'bold 24px Arial';
+          ctx.fillText('PREVIEW MODE', 20, 40);
+          
+          // Convert to data URL
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        };
+        
+        productImg.onerror = () => reject(new Error('Failed to load product image'));
+        productImg.src = productImageUrl;
+      };
+      
+      customerImg.onerror = () => reject(new Error('Failed to load customer image'));
+      customerImg.src = customerPhotoUrl;
+    });
+  };
+
   const handleVisualize = async () => {
     if (!selectedProduct) {
       toast.error('Please select a product');
@@ -241,64 +292,76 @@ export default function Kiosk() {
 
     try {
       // Immediately show the result screen with customer photo
-      // AI image will load after processing
       const initialResult = {
         product: selectedProduct,
         customer_photo: customerPhotoUrl,
-        ai_image: null, // Will be set after AI processing
+        ai_image: null,
         status: 'processing',
         error: null
       };
       
-      // Set initial result and move to results screen
       setResult(initialResult);
       setVisualizing(false);
       setStep('results');
 
-      // Now process AI in background
-      toast.info('Sending images to AI...');
-      
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-      const response = await fetch(`${BACKEND_URL}/api/visualize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_photo_url: customerPhotoUrl,
-          product_image_urls: [selectedProduct.image_url],
-          product_names: [selectedProduct.name],
-          industry: shop?.industry || 'fashion'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Visualization API request failed');
-      }
-
-      const data = await response.json();
-      const aiResult = data.results?.[0];
-
+      // Try AI first, fallback to client-side preview
       let visualizedImageUrl = null;
+      let usePreviewMode = false;
 
-      // If AI successfully generated an image, save it to visualized_uploads bucket
-      if (aiResult?.result_image && aiResult.status === 'success') {
-        toast.info('Saving AI result...');
+      try {
+        toast.info('Sending images to AI...');
         
-        try {
-          const { uploadBase64Image } = await import('../lib/supabase');
-          // Save the AI-generated visualization to the new visualized_uploads bucket
-          visualizedImageUrl = await uploadBase64Image(aiResult.result_image, 'visualized_uploads');
-          console.log('Visualization saved to:', visualizedImageUrl);
-          toast.success('Visualization created successfully!');
-        } catch (uploadError) {
-          console.error('Failed to upload visualization result:', uploadError);
-          console.error('Upload error details:', uploadError.message);
-          toast.error(`Failed to save visualization: ${uploadError.message}`);
-          // Fallback to using the base64 image directly
-          visualizedImageUrl = aiResult.result_image;
+        const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+        const response = await fetch(`${BACKEND_URL}/api/visualize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_photo_url: customerPhotoUrl,
+            product_image_urls: [selectedProduct.image_url],
+            product_names: [selectedProduct.name],
+            industry: shop?.industry || 'fashion'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const aiResult = data.results?.[0];
+
+          if (aiResult?.result_image && aiResult.status === 'success') {
+            toast.info('Saving AI result...');
+            
+            try {
+              const { uploadBase64Image } = await import('../lib/supabase');
+              visualizedImageUrl = await uploadBase64Image(aiResult.result_image, 'visualized_uploads');
+              console.log('Visualization saved to:', visualizedImageUrl);
+              toast.success('AI Visualization created!');
+            } catch (uploadError) {
+              console.error('Failed to upload visualization result:', uploadError);
+              visualizedImageUrl = aiResult.result_image;
+            }
+          } else {
+            throw new Error(aiResult?.error || 'AI generation failed');
+          }
+        } else {
+          throw new Error('API request failed');
         }
-      } else {
-        console.log('AI Result:', aiResult);
-        toast.warning(`AI generation failed: ${aiResult?.error || 'Unknown error'}`);
+      } catch (aiError) {
+        console.log('AI failed, using preview mode:', aiError.message);
+        toast.info('AI unavailable - Generating preview...');
+        
+        // Generate client-side preview
+        try {
+          const previewImage = await generateClientSidePreview(
+            customerPhotoUrl,
+            selectedProduct.image_url
+          );
+          visualizedImageUrl = previewImage;
+          usePreviewMode = true;
+          toast.success('Preview generated!');
+        } catch (previewError) {
+          console.error('Preview generation failed:', previewError);
+          toast.warning('Using product preview');
+        }
       }
 
       // Save visualization record to database
@@ -312,19 +375,19 @@ export default function Kiosk() {
           items_compared: [selectedProduct.id]
         }]);
 
-      // Update result with AI image
+      // Update result with visualization
       setResult({
         product: selectedProduct,
         customer_photo: customerPhotoUrl,
         ai_image: visualizedImageUrl,
-        status: aiResult?.status || 'failed',
-        error: aiResult?.error || null
+        status: visualizedImageUrl ? 'success' : 'failed',
+        error: null,
+        preview_mode: usePreviewMode
       });
       
     } catch (error) {
       console.error('Visualization error:', error);
       toast.error('Visualization failed. Please try again.');
-      // Still show result screen with just customer photo
       setResult({
         product: selectedProduct,
         customer_photo: customerPhotoUrl,
