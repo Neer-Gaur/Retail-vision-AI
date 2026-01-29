@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, X, Check, Loader2, Share2, Upload, 
-  SlidersHorizontal, ArrowUpDown, Sparkles, Eye
+  SlidersHorizontal, ArrowUpDown, Sparkles, Eye, LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
