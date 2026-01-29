@@ -382,6 +382,33 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
     
     return {'id': viz_doc['id'], 'results': results}
 
+@api_router.delete("/admin/delete-user/{email}")
+async def delete_user_by_email(email: str):
+    """Delete a user and their associated data by email"""
+    try:
+        # Find user first
+        user = await db.users.find_one({'email': email}, {'_id': 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        tenant_id = user.get('tenant_id')
+        
+        # Delete user
+        await db.users.delete_one({'email': email})
+        
+        # If user was an owner, delete their tenant and all associated data
+        if tenant_id:
+            await db.tenants.delete_one({'id': tenant_id})
+            await db.inventory.delete_many({'tenant_id': tenant_id})
+            await db.leads.delete_many({'tenant_id': tenant_id})
+            await db.visualizations.delete_many({'tenant_id': tenant_id})
+        
+        return {'message': f'User {email} and all associated data deleted successfully'}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/analytics")
 async def get_analytics(current_user = Depends(get_current_user)):
     tenant_id = current_user.get('tenant_id')
