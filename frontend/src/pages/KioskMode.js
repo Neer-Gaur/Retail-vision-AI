@@ -632,7 +632,7 @@ export default function KioskMode() {
                         <h3 className="font-semibold mb-1">{product.name}</h3>
                         <p className="text-sm text-slate-600 mb-2">{product.category}</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-lg font-bold">${product.price}</p>
+                          <p className="text-lg font-bold">₹{product.price}</p>
                           {product.tags && product.tags.length > 0 && (
                             <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">
                               {product.tags[0]}
