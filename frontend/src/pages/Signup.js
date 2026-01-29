@@ -42,7 +42,7 @@ export default function Signup() {
       localStorage.setItem('tenant_id', response.tenant_id || '');
       localStorage.setItem('industry', response.industry || '');
 
-      toast.success('Signup successful!');
+      toast.success('Account created successfully!');
 
       if (response.role === 'founder') {
         navigate('/founder');
@@ -57,52 +57,45 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-6 noise-bg">
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle at 50% 0%, rgba(0, 122, 255, 0.15) 0%, transparent 50%)'
-        }}
-      />
-
+    <div className="min-h-screen bg-white text-slate-900 flex items-center justify-center p-6 noise-bg">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md"
+        className="w-full max-w-md"
       >
         <Button
           data-testid="back-to-home-btn"
           onClick={() => navigate('/')}
           variant="ghost"
-          className="mb-8 hover:bg-white/10"
+          className="mb-8 rounded-full"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home
         </Button>
 
-        <div className="glass-card p-8 rounded-2xl">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-soft p-8">
           <div className="flex items-center gap-3 mb-8">
-            <Eye className="w-8 h-8 text-[#007AFF]" />
-            <h1 className="text-3xl font-bold kiosk-heading">Sign Up</h1>
+            <Eye className="w-8 h-8 text-black" />
+            <h1 className="text-3xl font-bold">Sign Up</h1>
           </div>
 
           <form onSubmit={handleSignup} className="space-y-6">
             <div>
-              <Label className="text-sm text-gray-400 mb-3 block">Account Type</Label>
-              <RadioGroup value={role} onValueChange={setRole}>
-                <div className="flex items-center space-x-2">
+              <Label className="text-sm text-slate-700 mb-3 block font-medium">Account Type</Label>
+              <RadioGroup value={role} onValueChange={setRole} className="space-y-3">
+                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
                   <RadioGroupItem data-testid="role-owner" value="owner" id="owner" />
-                  <Label htmlFor="owner" className="cursor-pointer">Shop Owner</Label>
+                  <Label htmlFor="owner" className="cursor-pointer flex-1">Shop Owner</Label>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
                   <RadioGroupItem data-testid="role-founder" value="founder" id="founder" />
-                  <Label htmlFor="founder" className="cursor-pointer">Founder (God View)</Label>
+                  <Label htmlFor="founder" className="cursor-pointer flex-1">Founder (God View)</Label>
                 </div>
               </RadioGroup>
             </div>
 
             <div>
-              <Label htmlFor="email" className="text-sm text-gray-400 mb-2 block">
+              <Label htmlFor="email" className="text-sm text-slate-700 mb-2 block font-medium">
                 Email
               </Label>
               <Input
@@ -112,12 +105,12 @@ export default function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 bg-white/5 border-white/10 focus:border-primary"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
               />
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-sm text-gray-400 mb-2 block">
+              <Label htmlFor="password" className="text-sm text-slate-700 mb-2 block font-medium">
                 Password
               </Label>
               <Input
@@ -127,14 +120,14 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 bg-white/5 border-white/10 focus:border-primary"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
               />
             </div>
 
             {role === 'owner' && (
               <>
                 <div>
-                  <Label htmlFor="shopName" className="text-sm text-gray-400 mb-2 block">
+                  <Label htmlFor="shopName" className="text-sm text-slate-700 mb-2 block font-medium">
                     Shop Name
                   </Label>
                   <Input
@@ -143,26 +136,26 @@ export default function Signup() {
                     value={shopName}
                     onChange={(e) => setShopName(e.target.value)}
                     required
-                    className="h-12 bg-white/5 border-white/10 focus:border-primary"
+                    className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-sm text-gray-400 mb-3 block">Industry</Label>
-                  <RadioGroup value={industry} onValueChange={setIndustry}>
-                    <div className="flex items-center space-x-2">
+                  <Label className="text-sm text-slate-700 mb-3 block font-medium">Industry</Label>
+                  <RadioGroup value={industry} onValueChange={setIndustry} className="space-y-3">
+                    <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
                       <RadioGroupItem data-testid="industry-fashion" value="fashion" id="fashion" />
-                      <Label htmlFor="fashion" className="cursor-pointer">Fashion (Sarees)</Label>
+                      <Label htmlFor="fashion" className="cursor-pointer flex-1">Fashion (Sarees)</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
                       <RadioGroupItem data-testid="industry-tiles" value="tiles" id="tiles" />
-                      <Label htmlFor="tiles" className="cursor-pointer">Tiles</Label>
+                      <Label htmlFor="tiles" className="cursor-pointer flex-1">Tiles</Label>
                     </div>
                   </RadioGroup>
                 </div>
 
                 <div>
-                  <Label htmlFor="adminPin" className="text-sm text-gray-400 mb-2 block">
+                  <Label htmlFor="adminPin" className="text-sm text-slate-700 mb-2 block font-medium">
                     Kiosk Exit PIN (4 digits)
                   </Label>
                   <Input
@@ -173,7 +166,7 @@ export default function Signup() {
                     value={adminPin}
                     onChange={(e) => setAdminPin(e.target.value)}
                     required
-                    className="h-12 bg-white/5 border-white/10 focus:border-primary"
+                    className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
                   />
                 </div>
               </>
@@ -189,12 +182,12 @@ export default function Signup() {
             </Button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6">
+          <p className="text-center text-slate-600 mt-6">
             Already have an account?{' '}
             <button
               data-testid="go-to-login-btn"
               onClick={() => navigate('/login')}
-              className="text-[#007AFF] hover:underline"
+              className="text-black font-semibold hover:underline"
             >
               Login
             </button>

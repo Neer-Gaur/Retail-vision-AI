@@ -40,38 +40,31 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-6 noise-bg">
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle at 50% 0%, rgba(0, 122, 255, 0.15) 0%, transparent 50%)'
-        }}
-      />
-
+    <div className="min-h-screen bg-white text-slate-900 flex items-center justify-center p-6 noise-bg">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md"
+        className="w-full max-w-md"
       >
         <Button
           data-testid="back-to-home-btn"
           onClick={() => navigate('/')}
           variant="ghost"
-          className="mb-8 hover:bg-white/10"
+          className="mb-8 rounded-full"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home
         </Button>
 
-        <div className="glass-card p-8 rounded-2xl">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-soft p-8">
           <div className="flex items-center gap-3 mb-8">
-            <Eye className="w-8 h-8 text-[#007AFF]" />
-            <h1 className="text-3xl font-bold kiosk-heading">Login</h1>
+            <Eye className="w-8 h-8 text-black" />
+            <h1 className="text-3xl font-bold">Login</h1>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <Label htmlFor="email" className="text-sm text-gray-400 mb-2 block">
+              <Label htmlFor="email" className="text-sm text-slate-700 mb-2 block font-medium">
                 Email
               </Label>
               <Input
@@ -81,12 +74,12 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 bg-white/5 border-white/10 focus:border-primary"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
               />
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-sm text-gray-400 mb-2 block">
+              <Label htmlFor="password" className="text-sm text-slate-700 mb-2 block font-medium">
                 Password
               </Label>
               <Input
@@ -96,7 +89,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 bg-white/5 border-white/10 focus:border-primary"
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
               />
             </div>
 
@@ -110,12 +103,12 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6">
+          <p className="text-center text-slate-600 mt-6">
             Don't have an account?{' '}
             <button
               data-testid="go-to-signup-btn"
               onClick={() => navigate('/signup')}
-              className="text-[#007AFF] hover:underline"
+              className="text-black font-semibold hover:underline"
             >
               Sign up
             </button>
