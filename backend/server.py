@@ -266,22 +266,45 @@ async def get_leads(current_user = Depends(get_current_user)):
     leads = await db.leads.find({'tenant_id': tenant_id}, {'_id': 0}).sort('created_at', -1).to_list(1000)
     return leads
 
-async def nano_banana_visualization(product_name: str, user_photo_base64: str, industry: str):
+async def nano_banana_visualization(product_name: str, product_category: str, user_photo_base64: str, industry: str):
     """
-    Use Gemini Nano Banana for AI visualization
+    Use Gemini Nano Banana for AI visualization - Virtual Try-On
+    Keeps user's face and body type, only changes clothing/tiles
     """
     try:
         api_key = os.environ.get('EMERGENT_LLM_KEY')
         if not api_key:
             raise Exception("EMERGENT_LLM_KEY not configured")
         
-        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="You are an AI visualization assistant")
+        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="You are an expert AI image editor specializing in virtual try-on and product visualization")
         chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
         
         if industry == 'fashion':
-            prompt = f"Edit this photo to show the person wearing {product_name}. Make it look natural and professional, like a showroom try-on. Keep the background and lighting similar."
-        else:
-            prompt = f"Edit this photo to show {product_name} installed in this space. Make it look realistic and professional, as if it's actually there."
+            prompt = f"""Edit this photo to show the person wearing {product_name} ({product_category}).
+
+CRITICAL REQUIREMENTS:
+- Keep the person's FACE exactly the same - do not change facial features, skin tone, or expression
+- Keep the person's BODY TYPE and POSTURE exactly the same
+- Only change their CLOTHING to show them wearing the {product_name}
+- Make it look natural and realistic, as if they are actually wearing this outfit
+- Maintain the original lighting, background, and photo quality
+- The clothing should fit naturally on their body
+- Keep the same photography angle and composition
+
+Result should look like a professional showroom try-on photo where only the outfit has changed."""
+        else:  # tiles
+            prompt = f"""Edit this photo to show {product_name} ({product_category}) installed in this space.
+
+CRITICAL REQUIREMENTS:
+- Keep the ROOM/SPACE layout exactly the same
+- Keep the LIGHTING and SHADOWS exactly the same
+- Only add/replace the flooring or wall tiles with {product_name}
+- Make it look realistic as if these tiles are actually installed
+- Maintain proper perspective and alignment with the existing space
+- The tiles should follow the contours and angles of the surface
+- Keep all furniture, fixtures, and other elements unchanged
+
+Result should look like a professional architectural visualization of the space with new tiles."""
         
         msg = UserMessage(
             text=prompt,
