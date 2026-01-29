@@ -112,8 +112,8 @@ Generate the visualization image now."""
         msg = UserMessage(
             text=prompt,
             file_contents=[
-                ImageContent(customer_photo_base64),
-                ImageContent(product_image_base64)
+                ImageContent(customer_photo_base64),  # Customer photo
+                ImageContent(product_image_base64)     # Product image
             ]
         )
         
