@@ -252,6 +252,8 @@
 ## agent_communication:
     - agent: "main"
       message: "Repository explored. Application is a Retail-Vision AI SaaS platform using React + Supabase frontend and FastAPI backend for AI visualization. All dependencies installed, both services running. Ready for comprehensive testing with provided credentials."
+    - agent: "main"
+      message: "Fixed 3 critical UI issues: 1) Increased z-index of Select dropdown to z-[200] to prevent overlay issues 2) Changed Kiosk mode background from light to dark theme for better text visibility, improved contrast on all text elements 3) Fixed visualization logic - corrected database column names (input_photo_url instead of customer_photo_url, added items_compared array), AI result now properly sent to Nano Banana and returned to UI. Ready for testing."
     - agent: "testing"
       message: "COMPREHENSIVE TESTING COMPLETED. CRITICAL ISSUES FOUND: 1) Dashboard has runtime errors ('Monitor is not defined', 'Permissions check failed') preventing core functionality. 2) Kiosk mode has overlay interception preventing form submission. Both need immediate fixes. All other features (Login, Inventory, Analytics, Leads, Backend API) working correctly."
     - agent: "testing"
