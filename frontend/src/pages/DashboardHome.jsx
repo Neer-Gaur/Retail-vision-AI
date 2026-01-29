@@ -12,7 +12,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 export default function DashboardHome() {
   const navigate = useNavigate();
-  const { shop } = useAuthStore();
+  const { shop, refreshShop } = useAuthStore();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalLeads: 0,
@@ -24,16 +24,36 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (shop?.id) loadDashboardData();
-  }, [shop?.id]);
+    const initializeDashboard = async () => {
+      // Ensure shop is loaded
+      if (!shop) {
+        await refreshShop();
+      }
+      if (shop?.id) {
+        await loadDashboardData();
+      }
+    };
+    initializeDashboard();
+  }, [shop?.id, refreshShop]);
 
   const loadDashboardData = async () => {
+    if (!shop?.id) {
+      console.log('No shop ID available');
+      setLoading(false);
+      return;
+    }
+
     try {
+      setLoading(true);
       const [inventoryRes, leadsRes, vizRes] = await Promise.all([
         supabase.from('inventory').select('*').eq('shop_id', shop.id),
         supabase.from('leads').select('*').eq('shop_id', shop.id),
         supabase.from('visualizations').select('*').eq('shop_id', shop.id)
       ]);
+
+      if (inventoryRes.error) console.error('Inventory error:', inventoryRes.error);
+      if (leadsRes.error) console.error('Leads error:', leadsRes.error);
+      if (vizRes.error) console.error('Visualizations error:', vizRes.error);
 
       const inventory = inventoryRes.data || [];
       const leads = leadsRes.data || [];
