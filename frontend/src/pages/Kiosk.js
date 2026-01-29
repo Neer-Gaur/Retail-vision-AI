@@ -838,17 +838,18 @@ export default function Kiosk() {
                 transition={{ delay: 0.3, type: "spring" }}
                 className="relative mb-8"
               >
-                {/* Show both images side by side on larger screens */}
+                {/* Show both images side by side - SAME HEIGHT */}
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Left: Original Customer Photo */}
                   <div className="relative">
                     <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-[2rem] blur-xl opacity-20" />
                     <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2rem] p-4 border-2 border-blue-400/30 shadow-xl">
                       <div className="text-center mb-3">
-                        <p className="text-blue-300 font-semibold">Original Photo</p>
+                        <p className="text-blue-300 font-semibold text-sm">Original Photo</p>
                       </div>
                       <div className="relative bg-black/50 rounded-2xl overflow-hidden border border-blue-400/20">
-                        <div className="aspect-[9/12]">
+                        {/* Fixed aspect ratio for consistency */}
+                        <div className="aspect-[9/14]">
                           <img 
                             src={result.customer_photo} 
                             alt="Your Photo" 
@@ -859,18 +860,18 @@ export default function Kiosk() {
                     </div>
                   </div>
 
-                  {/* Right: AI Visualization Mirror */}
+                  {/* Right: AI Visualization Mirror - SAME HEIGHT */}
                   <div className="relative">
                     {/* Outer Glow Effect */}
                     <div className="absolute -inset-4 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 rounded-[3rem] blur-2xl opacity-30 animate-pulse" />
                     
                     {/* Mirror Frame */}
-                    <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2.5rem] p-6 border-4 border-violet-500/30 shadow-2xl">
+                    <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2.5rem] p-4 border-4 border-violet-500/30 shadow-2xl">
                       {/* Corner Decorations */}
-                      <div className="absolute top-3 left-3 w-10 h-10 border-t-4 border-l-4 border-violet-400 rounded-tl-2xl" />
-                      <div className="absolute top-3 right-3 w-10 h-10 border-t-4 border-r-4 border-fuchsia-400 rounded-tr-2xl" />
-                      <div className="absolute bottom-3 left-3 w-10 h-10 border-b-4 border-l-4 border-purple-400 rounded-bl-2xl" />
-                      <div className="absolute bottom-3 right-3 w-10 h-10 border-b-4 border-r-4 border-violet-400 rounded-br-2xl" />
+                      <div className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 border-violet-400 rounded-tl-xl" />
+                      <div className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 border-fuchsia-400 rounded-tr-xl" />
+                      <div className="absolute bottom-3 left-3 w-8 h-8 border-b-4 border-l-4 border-purple-400 rounded-bl-xl" />
+                      <div className="absolute bottom-3 right-3 w-8 h-8 border-b-4 border-r-4 border-violet-400 rounded-br-xl" />
 
                       {/* Scanning Lines Effect */}
                       <motion.div
@@ -879,42 +880,38 @@ export default function Kiosk() {
                         transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                       />
 
-                      {/* Main Mirror Display */}
-                      <div className="relative bg-black/50 backdrop-blur-sm rounded-3xl overflow-hidden border border-violet-400/20">
-                        {/* Status Badge */}
+                      <div className="text-center mb-3">
+                        <p className="text-violet-300 font-semibold text-sm">
+                          {result.preview_mode ? 'Preview Mode' : 'AI Visualization'}
+                        </p>
+                      </div>
+
+                      {/* Main Mirror Display - PURE IMAGE */}
+                      <div className="relative bg-black/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-violet-400/20">
+                        {/* Status Badge - Moved to top */}
                         {result.ai_image && (
                           <motion.div
-                            initial={{ x: -100, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            transition={{ delay: 0.5 }}
-                            className={`absolute top-4 left-4 z-20 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg ${
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.5, type: "spring" }}
+                            className={`absolute top-3 left-3 z-20 px-2 py-1 rounded-full flex items-center gap-1.5 shadow-lg text-xs ${
                               result.preview_mode 
                                 ? 'bg-gradient-to-r from-orange-500 to-amber-500' 
                                 : 'bg-gradient-to-r from-emerald-500 to-green-500'
                             }`}
                           >
-                            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            <span className="text-white font-semibold text-xs">
-                              {result.preview_mode ? 'Preview Mode' : 'AI Enhanced'}
+                            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            <span className="text-white font-semibold">
+                              {result.preview_mode ? 'Preview' : 'AI'}
                             </span>
                           </motion.div>
                         )}
 
-                        {/* Product Info Badge */}
-                        <motion.div
-                          initial={{ x: 100, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.5 }}
-                          className="absolute top-4 right-4 z-20 px-3 py-1.5 bg-slate-900/80 backdrop-blur-sm rounded-full border border-violet-400/30"
-                        >
-                          <span className="text-violet-300 font-semibold text-xs">{result.product.name}</span>
-                        </motion.div>
-
-                        {/* Mirror Reflection - The Visualized Image */}
-                        <div className="relative aspect-[9/12]">
+                        {/* Mirror Reflection - PURE IMAGE ONLY */}
+                        <div className="aspect-[9/14]">
                           {result.ai_image ? (
                             <motion.div
-                              initial={{ opacity: 0, scale: 1.1 }}
+                              initial={{ opacity: 0, scale: 1.05 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ duration: 0.8 }}
                               className="relative w-full h-full"
@@ -922,7 +919,7 @@ export default function Kiosk() {
                               {/* Holographic Effect Overlay */}
                               <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-fuchsia-500/5 pointer-events-none z-10" />
                               
-                              {/* The AI Visualization Result */}
+                              {/* The Visualization Result - PURE IMAGE */}
                               <img 
                                 src={result.ai_image} 
                                 alt="Your Visualization" 
@@ -935,13 +932,13 @@ export default function Kiosk() {
                               
                               {/* Shimmer Effect */}
                               <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
                                 animate={{ x: ['-100%', '200%'] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "linear", delay: 1 }}
                               />
 
                               {/* Grid Overlay for Tech Feel */}
-                              <div className="absolute inset-0 opacity-10 pointer-events-none" 
+                              <div className="absolute inset-0 opacity-5 pointer-events-none" 
                                    style={{
                                      backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent)',
                                      backgroundSize: '50px 50px'
@@ -954,44 +951,49 @@ export default function Kiosk() {
                               <motion.div
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                className="w-20 h-20 rounded-full border-4 border-violet-500/30 border-t-violet-500 mb-6"
+                                className="w-16 h-16 rounded-full border-4 border-violet-500/30 border-t-violet-500 mb-4"
                               />
-                              <p className="text-violet-300 text-lg font-semibold mb-2">AI Processing...</p>
-                              <p className="text-slate-400 text-sm">Creating your visualization</p>
+                              <p className="text-violet-300 text-base font-semibold mb-1">AI Processing...</p>
+                              <p className="text-slate-400 text-xs">Creating visualization</p>
                             </div>
                           ) : (
                             // Fallback: Show product if AI failed
-                            <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                              <div className="text-center p-4">
-                                <img 
-                                  src={result.product.image_url} 
-                                  alt="Product" 
-                                  className="max-w-full max-h-[50vh] object-contain mx-auto mb-4"
-                                />
-                                <p className="text-slate-400 text-sm">AI Processing Unavailable</p>
-                                <p className="text-slate-500 text-xs">Product Preview</p>
-                              </div>
+                            <div className="w-full h-full flex items-center justify-center bg-slate-900 p-4">
+                              <img 
+                                src={result.product.image_url} 
+                                alt="Product" 
+                                className="max-w-full max-h-full object-contain"
+                              />
                             </div>
                           )}
-                        </div>
-
-                        {/* Bottom Info Bar */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-violet-300 text-xs mb-1">Price</p>
-                              <p className="text-white text-xl font-bold">₹{result.product.price?.toLocaleString('en-IN')}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-violet-300 text-xs mb-1">Category</p>
-                              <p className="text-white font-semibold text-sm">{result.product.category}</p>
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Product Info Below - Separate from images */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="mt-6 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-violet-300 text-sm mb-1">Product</p>
+                      <p className="text-white text-xl font-bold">{result.product.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-violet-300 text-sm mb-1">Price</p>
+                      <p className="text-white text-xl font-bold">₹{result.product.price?.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-violet-300 text-sm mb-1">Category</p>
+                      <p className="text-white font-semibold">{result.product.category}</p>
+                    </div>
+                  </div>
+                </motion.div>
               </motion.div>
 
               {/* Action Buttons */}
