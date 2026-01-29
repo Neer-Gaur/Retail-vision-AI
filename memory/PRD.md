@@ -152,3 +152,15 @@ Retail-Vision AI is a multi-tenant SaaS platform for Saree and Tile showrooms, e
 
 ---
 Last Updated: January 29, 2025
+
+## Changelog
+
+### Jan 29, 2025 - Major Rewrite Complete
+- Complete rewrite from FastAPI+MongoDB to React+Supabase
+- New modern dark theme with 3D animations
+- New table structure in Supabase with proper schema
+- Modern signup form with success animation
+- Dashboard with shop name, industry badge, subscription status
+- Fixed empty inventory state (shows "No Products Yet" instead of loading)
+- Kiosk mode with customer photo upload to Supabase storage
+- AI visualization integration with Nano Banana API
