@@ -413,7 +413,7 @@ export default function Kiosk() {
                       value={leadData.customer_name}
                       onChange={(e) => setLeadData({ ...leadData, customer_name: e.target.value })}
                       required
-                      className="h-14 rounded-xl border-slate-200 text-lg"
+                      className="h-14 rounded-xl border-slate-200 text-lg bg-white text-slate-900"
                       placeholder="Enter your name"
                     />
                   </div>
@@ -426,7 +426,7 @@ export default function Kiosk() {
                       value={leadData.whatsapp_number}
                       onChange={(e) => setLeadData({ ...leadData, whatsapp_number: e.target.value })}
                       required
-                      className="h-14 rounded-xl border-slate-200 text-lg"
+                      className="h-14 rounded-xl border-slate-200 text-lg bg-white text-slate-900"
                       placeholder="+91 98765 43210"
                     />
                   </div>
