@@ -1,161 +1,142 @@
 {
-  "project_name": "Retail-Vision AI",
-  "design_philosophy": {
-    "identity": "E1 - The Anti-AI Designer",
-    "core_principles": [
-      "Fusion over Imitation: Mix Luxury Fashion with Cyber-Security Aesthetics",
-      "Emotion First: God View = Power/Omniscience; Kiosk = Desire/Elegance",
-      "Content is King: The product (Saree/Tile) is the hero",
-      "Negative Space: Extreme padding for luxury feel"
-    ],
-    "anti_patterns": [
-      "No generic 'Bootstrap' layouts",
-      "No 'Inter' for headings in Kiosk mode",
-      "No gradients > 20% opacity",
-      "No visible scrollbars in Kiosk"
-    ]
-  },
   "typography": {
-    "font_families": {
-      "headings_kiosk": "Playfair Display, serif",
-      "headings_admin": "Barlow Condensed, sans-serif",
-      "body": "Manrope, sans-serif",
-      "mono": "JetBrains Mono, monospace"
+    "headings": {
+      "family": "Outfit, sans-serif",
+      "weights": ["300", "500", "700"],
+      "usage": "All headings (h1-h6). Use font-light (300) for large display text to feel premium, and font-bold (700) for small labels.",
+      "letterSpacing": "tracking-tight"
     },
-    "usage_rules": {
-      "kiosk_headings": "text-4xl md:text-6xl font-medium tracking-tight",
-      "admin_headings": "text-2xl md:text-3xl font-bold uppercase tracking-widest",
-      "labels": "text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground"
+    "body": {
+      "family": "Manrope, sans-serif",
+      "weights": ["400", "500", "600"],
+      "usage": "All body text, paragraphs, and inputs.",
+      "letterSpacing": "tracking-normal"
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "usage": "Data tables, code snippets, tenant IDs, API keys."
     }
   },
   "colors": {
-    "theme": "dark",
-    "palettes": {
-      "god_view": {
-        "name": "Cyber-Omniscience",
-        "background": "#050505",
-        "surface": "#0A0A0A",
-        "primary": "#007AFF",
-        "accent": "#00FF94",
-        "text_primary": "#FFFFFF",
-        "text_secondary": "#94A3B8"
-      },
-      "kiosk_fashion": {
-        "name": "Midnight Velvet",
-        "background": "#0F0518",
-        "surface": "#1A0B2E",
-        "primary": "#FFD700",
-        "accent": "#D946EF",
-        "text_primary": "#FDF4FF",
-        "text_secondary": "#E9D5FF"
-      },
-      "kiosk_tiles": {
-        "name": "Architectural Slate",
-        "background": "#0F172A",
-        "surface": "#1E293B",
-        "primary": "#F97316",
-        "accent": "#38BDF8",
-        "text_primary": "#F8FAFC",
-        "text_secondary": "#94A3B8"
-      }
+    "palette": {
+      "background": "#FFFFFF",
+      "foreground": "#0A0A0A",
+      "card": "#FFFFFF",
+      "card_foreground": "#0A0A0A",
+      "primary": "#0A0A0A",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#F1F5F9",
+      "secondary_foreground": "#0F172A",
+      "muted": "#F8FAFC",
+      "muted_foreground": "#64748B",
+      "accent": "#F1F5F9",
+      "accent_foreground": "#0F172A",
+      "destructive": "#EF4444",
+      "destructive_foreground": "#FFFFFF",
+      "border": "#E2E8F0",
+      "input": "#E2E8F0",
+      "ring": "#0A0A0A"
     },
     "gradients": {
-      "god_glow": "radial-gradient(circle at 50% 0%, rgba(0, 122, 255, 0.15) 0%, transparent 50%)",
-      "kiosk_overlay": "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 40%)"
+      "luxury_silver": "linear-gradient(135deg, #E2E8F0 0%, #FFFFFF 50%, #CBD5E1 100%)",
+      "holographic_sheen": "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.8) 50%, transparent 100%)",
+      "subtle_glow": "radial-gradient(circle at 50% 50%, rgba(255,255,255,1) 0%, rgba(248,250,252,0) 100%)"
+    },
+    "rules": [
+      "NEVER use dark mode as default. This is a WHITE theme app.",
+      "Use 'Deep Obsidian' (#0A0A0A) for primary actions to create high contrast against white.",
+      "Use 'Silver/Slate' gradients for borders to add a metallic luxury feel.",
+      "Avoid generic 'SaaS Blue'. Use monochrome + texture."
+    ]
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "light": "bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm",
+      "heavy": "bg-white/90 backdrop-blur-2xl border border-gray-200/50 shadow-lg"
+    },
+    "shadows": {
+      "soft": "0 4px 20px -2px rgba(0, 0, 0, 0.05)",
+      "floating": "0 20px 40px -4px rgba(0, 0, 0, 0.1)",
+      "inner": "inset 0 2px 4px 0 rgba(0, 0, 0, 0.02)"
+    },
+    "borders": {
+      "subtle": "border border-slate-100",
+      "highlight": "border border-slate-200"
+    },
+    "textures": {
+      "noise": "Use a subtle SVG noise overlay at 2% opacity on the main background to prevent 'flatness'."
     }
   },
   "layout_strategies": {
-    "god_view": {
-      "type": "Bento Grid (Mode B)",
-      "grid_cols": "grid-cols-1 md:grid-cols-4",
-      "gap": "gap-4",
-      "container": "p-6 max-w-[1600px] mx-auto"
+    "landing_page": {
+      "grid": "Tetris Grid (Mode A)",
+      "features": [
+        "Parallax scrolling using 'framer-motion'",
+        "Smooth scroll using 'lenis'",
+        "Large, asymmetric typography",
+        "Customer reviews in a horizontal scrolling marquee (slow)"
+      ]
     },
-    "kiosk": {
-      "type": "Vertical Stories",
-      "container": "h-screen w-full overflow-hidden relative",
-      "padding": "p-8 md:p-12",
-      "navigation": "hidden"
+    "dashboard": {
+      "grid": "Bento Grid (Mode B)",
+      "features": [
+        "Cardless design or very subtle white cards on off-white bg",
+        "High density data visualization",
+        "Collapsible sidebar for maximum workspace"
+      ]
     },
-    "landing": {
-      "type": "Tetris Grid (Mode A)",
-      "container": "max-w-7xl mx-auto px-6 py-24"
+    "kiosk_mode": {
+      "orientation": "Vertical (Portrait)",
+      "features": [
+        "Hidden navigation/headers",
+        "Touch targets minimum 64px height",
+        "No visible scrollbars",
+        "Exit mechanism: 5-sec long press on logo"
+      ]
     }
   },
   "components": {
     "buttons": {
-      "primary": "h-12 px-8 rounded-full bg-primary text-primary-foreground hover:scale-105 transition-transform font-medium tracking-wide shadow-[0_0_20px_rgba(var(--primary),0.3)]",
-      "kiosk_action": "h-16 w-full rounded-xl bg-white text-black text-xl font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors",
-      "ghost": "hover:bg-white/10 hover:text-white transition-colors"
+      "primary": "rounded-full bg-primary text-primary-foreground hover:scale-105 transition-all shadow-lg hover:shadow-xl",
+      "secondary": "rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      "ghost": "rounded-full hover:bg-slate-100 text-slate-900"
     },
     "cards": {
-      "glass": "bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl",
-      "solid": "bg-card border border-border shadow-sm rounded-xl",
-      "neon_border": "relative border border-primary/50 shadow-[0_0_15px_rgba(0,122,255,0.2)] bg-black/80"
+      "default": "bg-white rounded-2xl border border-slate-100 shadow-soft p-6",
+      "interactive": "bg-white rounded-2xl border border-slate-100 shadow-soft hover:shadow-floating transition-all cursor-pointer"
     },
     "inputs": {
-      "style": "h-12 bg-white/5 border-white/10 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-lg px-4 transition-all"
-    }
-  },
-  "visual_enhancers": {
-    "textures": {
-      "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")"
-    },
-    "effects": {
-      "glass_morphism": "backdrop-blur-2xl bg-black/40 border border-white/10",
-      "neon_glow": "drop-shadow-[0_0_10px_rgba(0,122,255,0.5)]"
-    }
-  },
-  "motion": {
-    "page_transition": {
-      "initial": { "opacity": 0, "y": 20 },
-      "animate": { "opacity": 1, "y": 0 },
-      "exit": { "opacity": 0, "y": -20 },
-      "transition": { "duration": 0.4, "ease": "easeOut" }
-    },
-    "hover": {
-      "scale": 1.02,
-      "transition": { "duration": 0.2 }
+      "default": "h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5 transition-all"
     }
   },
   "image_urls": {
-    "god_view_hero": "https://images.unsplash.com/photo-1762279389006-43963a0cee55?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1NzZ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMG5lb24lMjBkYXRhJTIwZmxvdyUyMGRhcmt8ZW58MHx8fHwxNzY5Njk4OTk3fDA&ixlib=rb-4.1.0&q=85",
-    "fashion_bg": "https://images.unsplash.com/photo-1623168524224-11cb41f8650c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBzYXJlZSUyMHNob3dyb29tJTIwZGFyayUyMGludGVyaW9yfGVufDB8fHx8MTc2OTY5ODk5MXww&ixlib=rb-4.1.0&q=85",
-    "tiles_bg": "https://images.unsplash.com/photo-1648891858402-28cc1280321a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjB0aWxlJTIwc2hvd3Jvb20lMjBkaXNwbGF5fGVufDB8fHx8MTc2OTY5ODk5M3ww&ixlib=rb-4.1.0&q=85",
-    "placeholders": {
-      "user_avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
-      "product_saree": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
-      "product_tile": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80"
-    }
+    "landing_hero_saree": "https://images.unsplash.com/photo-1758448755778-90ebf4d0f1e7",
+    "landing_hero_tile": "https://images.unsplash.com/photo-1641983706703-4a1e2d5463fe",
+    "showroom_interior": "https://images.unsplash.com/photo-1720247520862-7e4b14176fa8",
+    "model_saree_portrait": "https://images.unsplash.com/photo-1739429942425-ad55a9eb67d9",
+    "model_saree_full": "https://images.unsplash.com/photo-1739429944341-db4eefcd230a",
+    "bathroom_tile_context": "https://images.unsplash.com/photo-1758448018619-4cbe2250b9ad",
+    "abstract_bg": "https://images.unsplash.com/photo-1734971702046-87ab24ceba47"
   },
   "instructions_to_main_agent": [
-    "1. INSTALL FONTS: Add 'Playfair Display', 'Barlow Condensed', 'Manrope', 'JetBrains Mono' via Google Fonts in index.html.",
-    "2. THEME SETUP: Force 'dark' class on the html element. Do not allow light mode toggle for Kiosk.",
-    "3. KIOSK MODE: When '/kiosk' route is active, hide ALL navigation bars. Use a full-screen layout.",
-    "4. GOD VIEW: Use the 'god_view_hero' image as a subtle background with 10% opacity overlay.",
-    "5. ANIMATIONS: Use 'framer-motion' for all page transitions. No static jumps.",
-    "6. FORMS: Use Shadcn Form components but style them with the 'inputs.style' rules defined above.",
-    "7. TOASTS: Use 'sonner' for notifications (e.g., 'Stock Updated', 'Lead Captured').",
-    "8. TESTING: Add 'data-testid' to every interactive element (buttons, inputs, cards)."
+    "INSTALL 'lenis' for smooth scrolling immediately.",
+    "INSTALL 'framer-motion' for all animations.",
+    "UPDATE 'tailwind.config.js' to use the 'Outfit' and 'Manrope' fonts.",
+    "REMOVE 'Playfair Display' references. It is forbidden.",
+    "IMPLEMENT the 'God View' dashboard with a high-density data grid.",
+    "IMPLEMENT the 'Kiosk Mode' with the specific 5-second long-press exit logic.",
+    "ENSURE the 'Inventory Manager' supports image uploads (mocked if necessary).",
+    "USE the provided image URLs for the respective sections.",
+    "CREATE a 'Customer Reviews' section on the landing page with a horizontal marquee.",
+    "STRICTLY follow the White Luxury theme. No dark mode toggle."
   ],
-  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
-    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
-    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
-    "Create depth through layered design elements with z-index hierarchy",
-    "Use glass-morphism effects with backdrop filters (12-24px blur)",
-    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
-    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
-    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
-    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
-    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
-    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
-    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
-    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
-    "Prioritize using pre-existing components from src/components/ui when applicable",
-    "Create new components that match the style and conventions of existing components when needed",
-    "Examine existing components to understand the project's component patterns before creating new ones",
-    "Components MUST use named exports (export const ComponentName = ...)",
-    "Pages MUST use default exports (export default function PageName() {...})",
-    "Use 'sonner' for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  "universal_guidelines": [
+    "Do not use generic centered layouts.",
+    "Use 2-3x more spacing than typical designs (p-8, p-12).",
+    "Every interaction must have a micro-animation.",
+    "Use 'sonner' for toasts.",
+    "All interactive elements must have 'data-testid'.",
+    "Do not use 'Inter' font for headings.",
+    "Do not use purple or teal for CTAs."
   ]
 }
