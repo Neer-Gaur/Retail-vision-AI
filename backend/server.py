@@ -165,6 +165,18 @@ async def get_tenants(current_user = Depends(get_current_user)):
     tenants = await db.tenants.find({}, {'_id': 0}).to_list(1000)
     return tenants
 
+@api_router.post("/upload-image")
+async def upload_image(file: UploadFile = File(...), current_user = Depends(get_current_user)):
+    """Upload image and return base64 data URL for storage"""
+    try:
+        contents = await file.read()
+        base64_data = base64.b64encode(contents).decode('utf-8')
+        mime_type = file.content_type or 'image/jpeg'
+        data_url = f"data:{mime_type};base64,{base64_data}"
+        return {'image_url': data_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 @api_router.get("/inventory")
 async def get_inventory(current_user = Depends(get_current_user), kiosk: bool = False):
     tenant_id = current_user.get('tenant_id')
