@@ -238,25 +238,45 @@ export default function Kiosk() {
         uploadedPhotoUrl = await uploadBase64Image(photoBase64, 'customer-uploads');
       }
 
-      // For now, create mock visualization results
-      // In production, this would call an AI service (Nano Banana)
-      const mockResults = selectedProducts.map(product => ({
-        product_name: product.name,
-        product_image: product.image_url,
-        result_image: null, // AI would generate this
-        status: 'pending'
-      }));
+      // Call AI visualization API
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+      const response = await fetch(`${BACKEND_URL}/api/visualize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_photo_url: uploadedPhotoUrl,
+          product_image_urls: selectedProducts.map(p => p.image_url),
+          product_names: selectedProducts.map(p => p.name),
+          industry: shop?.industry || 'fashion'
+        })
+      });
+
+      let aiResults = [];
+      
+      if (response.ok) {
+        const data = await response.json();
+        aiResults = data.results || [];
+      } else {
+        // Fallback to showing product images if AI fails
+        aiResults = selectedProducts.map(product => ({
+          product_name: product.name,
+          product_image: product.image_url,
+          result_image: null,
+          status: 'failed',
+          error: 'AI service unavailable'
+        }));
+      }
 
       // Save visualization record
       await visualizationsAPI.create({
         shop_id: shop.id,
         lead_id: leadId,
         input_photo_url: uploadedPhotoUrl,
-        result_photo_url: null, // Would be set by AI
+        result_photo_url: aiResults[0]?.result_image || null,
         items_compared: selectedProducts.map(p => p.id)
       });
 
-      setResults(mockResults);
+      setResults(aiResults);
       setStep('results');
     } catch (error) {
       toast.error('Visualization failed. Please try again.');
