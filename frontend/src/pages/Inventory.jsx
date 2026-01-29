@@ -35,6 +35,10 @@ export default function Inventory() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
+  // Debug: log shop data
+  console.log('Shop data:', shop);
+  console.log('Industry:', shop?.industry);
+
   const categories = shop?.industry === 'fashion' ? FASHION_CATEGORIES : TILE_CATEGORIES;
   const isTrialLimitReached = shop?.subscription_status === 'trial' && inventory.length >= TRIAL_LIMIT;
 
