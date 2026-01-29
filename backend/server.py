@@ -79,36 +79,25 @@ async def generate_visualization(
         
         # Build the prompt based on industry
         if industry == 'fashion':
-            prompt = f"""You are an expert fashion AI stylist. 
-            
-I'm providing two images:
-1. First image: A customer's photo showing their face and body
-2. Second image: A clothing item called "{product_name}"
+            prompt = f"""Create a realistic visualization showing the person from the first image wearing the {product_name} from the second image.
 
-Your task: Create a realistic visualization showing the customer WEARING the clothing item from the second image. 
-
-CRITICAL REQUIREMENTS:
-- Keep the customer's face, hairstyle, and body type EXACTLY the same
-- The clothing should fit naturally on their body
-- Maintain realistic lighting and shadows
-- The result should look like a professional fashion photo
-- Only replace/add the clothing, keep everything else about the person identical
+Requirements:
+- The person should be wearing the {product_name} naturally
+- Maintain the person's pose and background
+- Ensure the product fits naturally on the person
+- Keep realistic lighting and shadows
+- Make it look like a professional fashion photoshoot
 
 Generate the visualization image now."""
         else:
-            prompt = f"""You are an expert interior design AI.
-            
-I'm providing two images:
-1. First image: A room or space photo
-2. Second image: A tile design called "{product_name}"
+            prompt = f"""Create a realistic visualization showing the {product_name} from the second image applied to the floor or wall in the room from the first image.
 
-Your task: Create a realistic visualization showing the tile from the second image applied to the floor or wall in the room from the first image.
-
-CRITICAL REQUIREMENTS:
-- Keep the room layout, furniture, and lighting the same
-- Apply the tile pattern realistically with proper perspective
-- Maintain proper scale and proportions
-- The result should look like a professional interior design render
+Requirements:
+- Apply the tile/material naturally to the surface
+- Maintain realistic perspective and lighting
+- Ensure proper alignment and spacing
+- Keep the original room's characteristics
+- Make it look professionally installed
 
 Generate the visualization image now."""
 
