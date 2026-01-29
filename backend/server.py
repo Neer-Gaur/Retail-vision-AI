@@ -62,12 +62,14 @@ async def generate_visualization(
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
-        api_key = os.getenv("EMERGENT_LLM_KEY")
+        # Get API key - prioritize user's Google key, fallback to Emergent
+        api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('EMERGENT_LLM_KEY')
+        
         if not api_key:
             return VisualizationResult(
                 product_name=product_name,
                 status="failed",
-                error="API key not configured"
+                error="No API key configured"
             )
         
         # Create unique session
