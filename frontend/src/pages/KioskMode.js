@@ -574,11 +574,11 @@ export default function KioskMode() {
                         isSelected ? 'ring-4 ring-black border-black shadow-floating' : 'border-slate-100 hover:border-slate-300 shadow-soft'
                       }`}
                     >
-                      <div className="aspect-[3/4] overflow-hidden bg-slate-100">
+                      <div className="aspect-[3/4] bg-white flex items-center justify-center border-b border-slate-100">
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="max-w-full max-h-full object-contain p-3"
                         />
                       </div>
                       {isSelected && (
