@@ -39,6 +39,8 @@ class VisualizationResult(BaseModel):
     result_image: Optional[str] = None
     status: str  # 'success', 'failed', 'pending'
     error: Optional[str] = None
+    model: Optional[str] = None
+    description: Optional[str] = None
 
 class VisualizationResponse(BaseModel):
     results: List[VisualizationResult]
