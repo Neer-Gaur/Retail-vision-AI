@@ -258,29 +258,41 @@ export default function Dashboard() {
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-lg">
                   <Sparkles className="w-7 h-7 text-white" />
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                </div>
+                {shop && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  </div>
+                )}
               </motion.div>
               <div>
-                <motion.h1 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="text-2xl font-bold bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent"
-                >
-                  {shop?.shop_name}
-                </motion.h1>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    shop?.industry === 'fashion' 
-                      ? 'bg-pink-100 text-pink-700' 
-                      : 'bg-cyan-100 text-cyan-700'
-                  }`}>
-                    {shop?.industry === 'fashion' ? '👗 Fashion' : '🏠 Tiles'}
-                  </span>
-                  <span className="text-xs text-slate-500">•</span>
-                  <span className="text-xs text-slate-500">{shop?.owner_email}</span>
-                </div>
+                {shop ? (
+                  <>
+                    <motion.h1 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-2xl font-bold bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent"
+                      data-testid="shop-name"
+                    >
+                      {shop.shop_name}
+                    </motion.h1>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        shop.industry === 'fashion' 
+                          ? 'bg-pink-100 text-pink-700' 
+                          : 'bg-cyan-100 text-cyan-700'
+                      }`}>
+                        {shop.industry === 'fashion' ? '👗 Fashion' : '🏠 Tiles'}
+                      </span>
+                      <span className="text-xs text-slate-500">•</span>
+                      <span className="text-xs text-slate-500">{shop.owner_email}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="animate-pulse">
+                    <div className="h-7 w-48 bg-slate-200 rounded mb-2" />
+                    <div className="h-4 w-32 bg-slate-100 rounded" />
+                  </div>
+                )}
               </div>
             </div>
             
@@ -289,6 +301,7 @@ export default function Dashboard() {
                 onClick={() => navigate('/kiosk')}
                 className="rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
                 data-testid="launch-kiosk-btn"
+                disabled={!shop}
               >
                 <Monitor className="w-4 h-4 mr-2" />
                 Launch Kiosk
