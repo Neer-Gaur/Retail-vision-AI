@@ -235,15 +235,16 @@
 
 ## test_plan:
   current_focus:
-    - "Authentication Flow (Login/Signup)"
     - "Owner Dashboard"
-    - "Inventory Management"
     - "Kiosk Mode"
-    - "AI Visualization API Endpoint"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Owner Dashboard"
+    - "Kiosk Mode"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 ## agent_communication:
     - agent: "main"
       message: "Repository explored. Application is a Retail-Vision AI SaaS platform using React + Supabase frontend and FastAPI backend for AI visualization. All dependencies installed, both services running. Ready for comprehensive testing with provided credentials."
+    - agent: "testing"
+      message: "COMPREHENSIVE TESTING COMPLETED. CRITICAL ISSUES FOUND: 1) Dashboard has runtime errors ('Monitor is not defined', 'Permissions check failed') preventing core functionality. 2) Kiosk mode has overlay interception preventing form submission. Both need immediate fixes. All other features (Login, Inventory, Analytics, Leads, Backend API) working correctly."
