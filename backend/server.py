@@ -371,8 +371,13 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
     
     for product in products:
         try:
-            # Try Nano Banana first
-            result_image = await nano_banana_visualization(product['name'], user_photo_base64, industry)
+            # Try Nano Banana first with detailed product info
+            result_image = await nano_banana_visualization(
+                product['name'], 
+                product.get('category', 'Item'),
+                user_photo_base64, 
+                industry
+            )
             
             if not result_image:
                 # Fallback to mock
@@ -381,6 +386,7 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
             results.append({
                 'product_id': product['id'],
                 'product_name': product['name'],
+                'product_category': product.get('category', ''),
                 'result_image': result_image
             })
         except Exception as e:
@@ -389,6 +395,7 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
             results.append({
                 'product_id': product['id'],
                 'product_name': product['name'],
+                'product_category': product.get('category', ''),
                 'result_image': result_image
             })
     
