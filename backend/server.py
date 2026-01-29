@@ -168,14 +168,61 @@ async def get_tenants(current_user = Depends(get_current_user)):
 
 @api_router.post("/upload-image")
 async def upload_image(file: UploadFile = File(...), current_user = Depends(get_current_user)):
-    """Upload image and return base64 data URL for storage"""
+    """Upload image, resize to 4:3 aspect ratio, and return base64 data URL"""
     try:
+        from PIL import Image
+        import io
+        
         contents = await file.read()
-        base64_data = base64.b64encode(contents).decode('utf-8')
-        mime_type = file.content_type or 'image/jpeg'
-        data_url = f"data:{mime_type};base64,{base64_data}"
+        
+        # Open image with PIL
+        image = Image.open(io.BytesIO(contents))
+        
+        # Convert RGBA to RGB if needed
+        if image.mode == 'RGBA':
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            background.paste(image, mask=image.split()[3])
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Target aspect ratio 4:3 (same as card: 192px height = 256px width for 4:3)
+        target_width = 800
+        target_height = 600  # 4:3 ratio
+        
+        # Calculate resize dimensions to cover the target
+        img_ratio = image.width / image.height
+        target_ratio = target_width / target_height
+        
+        if img_ratio > target_ratio:
+            # Image is wider, fit height and crop width
+            new_height = target_height
+            new_width = int(target_height * img_ratio)
+        else:
+            # Image is taller, fit width and crop height
+            new_width = target_width
+            new_height = int(target_width / img_ratio)
+        
+        # Resize image
+        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Crop to exact target size from center
+        left = (new_width - target_width) // 2
+        top = (new_height - target_height) // 2
+        right = left + target_width
+        bottom = top + target_height
+        
+        image = image.crop((left, top, right, bottom))
+        
+        # Convert back to base64
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG", quality=90)
+        base64_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        data_url = f"data:image/jpeg;base64,{base64_data}"
+        
         return {'image_url': data_url}
     except Exception as e:
+        logging.error(f"Image upload error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @api_router.get("/inventory")
