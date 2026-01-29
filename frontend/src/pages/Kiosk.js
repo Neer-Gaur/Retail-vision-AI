@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Camera, X, Check, Loader2, Share2, Eye, Upload, 
-  SlidersHorizontal, ArrowUpDown, Sparkles
+  Camera, X, Check, Loader2, Share2, Upload, 
+  SlidersHorizontal, ArrowUpDown, Sparkles, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { useAuthStore } from '../store/authStore';
-import { 
-  inventoryAPI, leadsAPI, visualizationsAPI, shopAPI, 
-  uploadBase64Image 
-} from '../lib/supabase';
+import { supabase, uploadBase64Image } from '../lib/supabase';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -32,13 +29,13 @@ export default function Kiosk() {
   const [step, setStep] = useState('lead');
   const [leadData, setLeadData] = useState({ customer_name: '', whatsapp_number: '' });
   const [leadId, setLeadId] = useState(null);
-  const [photoUrl, setPhotoUrl] = useState(null);
+  const [customerPhotoUrl, setCustomerPhotoUrl] = useState(null);
   const [photoBase64, setPhotoBase64] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [filteredInventory, setFilteredInventory] = useState([]);
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [visualizing, setVisualizing] = useState(false);
-  const [results, setResults] = useState(null);
+  const [result, setResult] = useState(null);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [pin, setPin] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -69,11 +66,18 @@ export default function Kiosk() {
 
   const loadInventory = async () => {
     try {
-      const data = await inventoryAPI.getAll(shop.id, true); // kiosk mode = true (only in-stock items)
-      setInventory(data);
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('shop_id', shop.id)
+        .gt('stock_count', 0) // Only in-stock items
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setInventory(data || []);
       
       // Calculate max price
-      const max = Math.max(...data.map(item => item.price), 100000);
+      const max = Math.max(...(data || []).map(item => item.price), 100000);
       setMaxPrice(max);
       setPriceRange([0, max]);
     } catch (error) {
@@ -100,36 +104,28 @@ export default function Kiosk() {
   const applyFiltersAndSort = () => {
     let filtered = [...inventory];
 
-    // Price filter
     filtered = filtered.filter(item => 
       item.price >= priceRange[0] && item.price <= priceRange[1]
     );
 
-    // Category filter
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(item =>
         selectedCategories.includes(item.category)
       );
     }
 
-    // Tags filter
     if (selectedTags.length > 0) {
       filtered = filtered.filter(item =>
         selectedTags.some(tag => item.tags?.includes(tag))
       );
     }
 
-    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'name':
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
+        case 'price-low': return a.price - b.price;
+        case 'price-high': return b.price - a.price;
+        case 'name': return a.name.localeCompare(b.name);
+        default: return 0;
       }
     });
 
@@ -166,7 +162,7 @@ export default function Kiosk() {
     setShowCamera(false);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -174,10 +170,20 @@ export default function Kiosk() {
     canvas.getContext('2d').drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
     setPhotoBase64(dataUrl);
-    setPhotoUrl(dataUrl);
     stopCamera();
-    setStep('gallery');
-    toast.success('Photo captured! Select products to try');
+    
+    // Upload to Supabase
+    setUploadingPhoto(true);
+    try {
+      const uploadedUrl = await uploadBase64Image(dataUrl, 'customer-uploads');
+      setCustomerPhotoUrl(uploadedUrl);
+      setStep('gallery');
+      toast.success('Photo captured! Select a product to try');
+    } catch (error) {
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -186,12 +192,18 @@ export default function Kiosk() {
 
     setUploadingPhoto(true);
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       setPhotoBase64(reader.result);
-      setPhotoUrl(reader.result);
-      setStep('gallery');
-      setUploadingPhoto(false);
-      toast.success('Photo uploaded! Select products to try');
+      try {
+        const uploadedUrl = await uploadBase64Image(reader.result, 'customer-uploads');
+        setCustomerPhotoUrl(uploadedUrl);
+        setStep('gallery');
+        toast.success('Photo uploaded! Select a product to try');
+      } catch (error) {
+        toast.error('Failed to upload photo');
+      } finally {
+        setUploadingPhoto(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -199,12 +211,18 @@ export default function Kiosk() {
   const handleLeadSubmit = async (e) => {
     e.preventDefault();
     try {
-      const lead = await leadsAPI.create({
-        shop_id: shop.id,
-        customer_name: leadData.customer_name,
-        whatsapp_number: leadData.whatsapp_number
-      });
-      setLeadId(lead.id);
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([{
+          shop_id: shop.id,
+          customer_name: leadData.customer_name,
+          whatsapp_number: leadData.whatsapp_number
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setLeadId(data.id);
       setStep('camera');
       toast.success('Welcome! Let\'s capture your photo');
     } catch (error) {
@@ -212,19 +230,9 @@ export default function Kiosk() {
     }
   };
 
-  const toggleProductSelection = (product) => {
-    if (selectedProducts.find(p => p.id === product.id)) {
-      setSelectedProducts(selectedProducts.filter(p => p.id !== product.id));
-    } else if (selectedProducts.length < 3) {
-      setSelectedProducts([...selectedProducts, product]);
-    } else {
-      toast.error('Maximum 3 products can be selected');
-    }
-  };
-
   const handleVisualize = async () => {
-    if (selectedProducts.length === 0) {
-      toast.error('Please select at least one product');
+    if (!selectedProduct) {
+      toast.error('Please select a product');
       return;
     }
 
@@ -232,53 +240,46 @@ export default function Kiosk() {
     setStep('visualize');
 
     try {
-      // Upload the customer photo to Supabase storage
-      let uploadedPhotoUrl = photoUrl;
-      if (photoBase64) {
-        uploadedPhotoUrl = await uploadBase64Image(photoBase64, 'customer-uploads');
-      }
-
-      // Call AI visualization API
+      // Call backend AI visualization API
       const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
       const response = await fetch(`${BACKEND_URL}/api/visualize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_photo_url: uploadedPhotoUrl,
-          product_image_urls: selectedProducts.map(p => p.image_url),
-          product_names: selectedProducts.map(p => p.name),
+          customer_photo_url: customerPhotoUrl,
+          product_image_urls: [selectedProduct.image_url],
+          product_names: [selectedProduct.name],
           industry: shop?.industry || 'fashion'
         })
       });
 
-      let aiResults = [];
+      let aiResult = null;
       
       if (response.ok) {
         const data = await response.json();
-        aiResults = data.results || [];
-      } else {
-        // Fallback to showing product images if AI fails
-        aiResults = selectedProducts.map(product => ({
-          product_name: product.name,
-          product_image: product.image_url,
-          result_image: null,
-          status: 'failed',
-          error: 'AI service unavailable'
-        }));
+        aiResult = data.results?.[0] || null;
       }
 
       // Save visualization record
-      await visualizationsAPI.create({
-        shop_id: shop.id,
-        lead_id: leadId,
-        input_photo_url: uploadedPhotoUrl,
-        result_photo_url: aiResults[0]?.result_image || null,
-        items_compared: selectedProducts.map(p => p.id)
-      });
+      await supabase
+        .from('visualizations')
+        .insert([{
+          shop_id: shop.id,
+          lead_id: leadId,
+          customer_photo_url: customerPhotoUrl,
+          product_id: selectedProduct.id,
+          result_photo_url: aiResult?.result_image || null
+        }]);
 
-      setResults(aiResults);
+      setResult({
+        product: selectedProduct,
+        ai_image: aiResult?.result_image || null,
+        status: aiResult?.status || 'failed',
+        error: aiResult?.error || null
+      });
       setStep('results');
     } catch (error) {
+      console.error('Visualization error:', error);
       toast.error('Visualization failed. Please try again.');
       setStep('gallery');
     } finally {
@@ -290,10 +291,10 @@ export default function Kiosk() {
     setStep('lead');
     setLeadData({ customer_name: '', whatsapp_number: '' });
     setLeadId(null);
-    setPhotoUrl(null);
+    setCustomerPhotoUrl(null);
     setPhotoBase64(null);
-    setSelectedProducts([]);
-    setResults(null);
+    setSelectedProduct(null);
+    setResult(null);
     resetFilters();
   };
 
@@ -317,24 +318,18 @@ export default function Kiosk() {
   };
 
   const handlePinVerify = async () => {
-    try {
-      const isValid = await shopAPI.verifyPin(shop.id, pin);
-      if (isValid) {
-        document.exitFullscreen?.();
-        navigate('/dashboard');
-      } else {
-        toast.error('Invalid PIN');
-        setPin('');
-      }
-    } catch (error) {
-      toast.error('Verification failed');
+    if (pin === shop?.admin_pin) {
+      document.exitFullscreen?.();
+      navigate('/dashboard');
+    } else {
+      toast.error('Invalid PIN');
       setPin('');
     }
   };
 
   const generateWhatsAppLink = () => {
     const message = encodeURIComponent(
-      `Hi! I just tried products at ${shop?.shop_name}. Check out my visualizations!`
+      `Hi! I just tried ${selectedProduct?.name} at ${shop?.shop_name}. Check it out!`
     );
     return `https://wa.me/${leadData.whatsapp_number?.replace(/\D/g, '')}?text=${message}`;
   };
@@ -342,7 +337,7 @@ export default function Kiosk() {
   const overlayType = shop?.industry === 'fashion' ? 'silhouette' : 'grid';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-white text-slate-900 relative">
+    <div className="h-screen w-full overflow-hidden bg-slate-950 text-white relative">
       {/* Logo for Exit */}
       <motion.div
         ref={logoRef}
@@ -354,13 +349,13 @@ export default function Kiosk() {
         className="absolute top-6 left-6 z-50 cursor-pointer select-none"
         data-testid="kiosk-logo"
       >
-        <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg">
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         {longPressDuration > 0 && (
-          <div className="absolute -bottom-2 left-0 w-12 h-1 bg-slate-200 rounded overflow-hidden">
+          <div className="absolute -bottom-2 left-0 w-12 h-1 bg-slate-700 rounded overflow-hidden">
             <div
-              className="h-full bg-violet-600 rounded transition-all"
+              className="h-full bg-violet-500 rounded transition-all"
               style={{ width: `${(longPressDuration / 5000) * 100}%` }}
             />
           </div>
@@ -375,62 +370,63 @@ export default function Kiosk() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-white"
+            className="h-full flex items-center justify-center p-8"
             data-testid="lead-capture-step"
           >
-            <div className="max-w-md w-full bg-white rounded-3xl border border-slate-100 shadow-2xl p-8">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-8 h-8 text-white" />
+            <div className="max-w-md w-full">
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-3xl blur-xl opacity-30" />
+              <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-slate-800 p-8">
+                <div className="text-center mb-8">
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-500/30"
+                  >
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </motion.div>
+                  <h1 className="text-3xl font-bold mb-2">
+                    Welcome to {shop?.shop_name}
+                  </h1>
+                  <p className="text-slate-400">
+                    Enter your details to start
+                  </p>
                 </div>
-                <h1 className="text-3xl font-bold mb-2">
-                  Welcome to {shop?.shop_name}
-                </h1>
-                <p className="text-slate-600">
-                  Enter your details to start your visualization journey
-                </p>
+
+                <form onSubmit={handleLeadSubmit} className="space-y-5">
+                  <div>
+                    <Label className="text-slate-300 mb-2 block">Your Name</Label>
+                    <Input
+                      data-testid="lead-name-input"
+                      value={leadData.customer_name}
+                      onChange={(e) => setLeadData({ ...leadData, customer_name: e.target.value })}
+                      required
+                      className="h-14 rounded-xl bg-slate-800/50 border-slate-700 text-white text-lg"
+                      placeholder="Enter your name"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-slate-300 mb-2 block">WhatsApp Number</Label>
+                    <Input
+                      data-testid="lead-whatsapp-input"
+                      type="tel"
+                      value={leadData.whatsapp_number}
+                      onChange={(e) => setLeadData({ ...leadData, whatsapp_number: e.target.value })}
+                      required
+                      className="h-14 rounded-xl bg-slate-800/50 border-slate-700 text-white text-lg"
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+
+                  <Button
+                    data-testid="lead-submit-btn"
+                    type="submit"
+                    className="w-full h-14 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-lg font-semibold"
+                  >
+                    Continue
+                  </Button>
+                </form>
               </div>
-
-              <form onSubmit={handleLeadSubmit} className="space-y-6">
-                <div>
-                  <Label htmlFor="name" className="text-slate-700 mb-2 block font-medium">
-                    Your Name
-                  </Label>
-                  <Input
-                    data-testid="lead-name-input"
-                    id="name"
-                    value={leadData.customer_name}
-                    onChange={(e) => setLeadData({ ...leadData, customer_name: e.target.value })}
-                    required
-                    className="h-14 rounded-xl border-slate-200 bg-slate-50 text-lg"
-                    placeholder="Enter your name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="whatsapp" className="text-slate-700 mb-2 block font-medium">
-                    WhatsApp Number
-                  </Label>
-                  <Input
-                    data-testid="lead-whatsapp-input"
-                    id="whatsapp"
-                    type="tel"
-                    value={leadData.whatsapp_number}
-                    onChange={(e) => setLeadData({ ...leadData, whatsapp_number: e.target.value })}
-                    required
-                    className="h-14 rounded-xl border-slate-200 bg-slate-50 text-lg"
-                    placeholder="+91 98765 43210"
-                  />
-                </div>
-
-                <Button
-                  data-testid="lead-submit-btn"
-                  type="submit"
-                  className="w-full h-14 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold"
-                >
-                  Continue
-                </Button>
-              </form>
             </div>
           </motion.div>
         )}
@@ -442,16 +438,14 @@ export default function Kiosk() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-white"
+            className="h-full flex flex-col items-center justify-center p-8"
             data-testid="camera-step"
           >
-            <h2 className="text-4xl font-bold mb-2 text-center">
-              Capture Your Photo
-            </h2>
-            <p className="text-slate-600 mb-8 text-center max-w-xl">
+            <h2 className="text-4xl font-bold mb-2 text-center">Capture Your Photo</h2>
+            <p className="text-slate-400 mb-8 text-center max-w-xl">
               {shop?.industry === 'fashion' 
-                ? 'Take a photo or upload from your device to see how products look on you'
-                : 'Capture the space or upload an image to visualize tiles'}
+                ? 'Take a photo to see how products look on you'
+                : 'Capture the space to visualize tiles'}
             </p>
 
             {showCamera ? (
@@ -468,47 +462,28 @@ export default function Kiosk() {
                     <svg className="w-1/2 h-5/6 opacity-30" viewBox="0 0 200 400" fill="white">
                       <ellipse cx="100" cy="80" rx="50" ry="60" />
                       <rect x="60" y="130" width="80" height="150" rx="10" />
-                      <path d="M 60 280 L 80 380 L 70 400 L 50 400 L 40 380 Z" />
-                      <path d="M 140 280 L 120 380 L 130 400 L 150 400 L 160 380 Z" />
-                    </svg>
-                  </div>
-                )}
-                {overlayType === 'grid' && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    <svg className="w-full h-full opacity-30" viewBox="0 0 400 400">
-                      {[...Array(10)].map((_, i) => (
-                        <React.Fragment key={i}>
-                          <line x1="0" y1={i * 40} x2="400" y2={i * 40} stroke="white" strokeWidth="1" />
-                          <line x1={i * 40} y1="0" x2={i * 40} y2="400" stroke="white" strokeWidth="1" />
-                        </React.Fragment>
-                      ))}
                     </svg>
                   </div>
                 )}
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
-                  <Button
-                    onClick={stopCamera}
-                    variant="outline"
-                    className="rounded-full h-12 px-6 bg-white/20 backdrop-blur-xl text-white border-white/30"
-                  >
+                  <Button onClick={stopCamera} variant="outline" className="rounded-full h-12 px-6 bg-white/10 border-white/20 text-white">
                     Cancel
                   </Button>
                   <Button
                     onClick={capturePhoto}
-                    className="rounded-full h-12 px-8 bg-white text-black hover:bg-slate-100"
+                    disabled={uploadingPhoto}
+                    className="rounded-full h-12 px-8 bg-white text-black hover:bg-slate-200"
                   >
-                    <Camera className="w-5 h-5 mr-2" />
-                    Capture
+                    {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Camera className="w-5 h-5 mr-2" /> Capture</>}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-4 w-full max-w-md">
                 <Button
-                  data-testid="camera-trigger-btn"
                   onClick={startCamera}
                   disabled={uploadingPhoto}
-                  className="h-16 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold"
+                  className="h-16 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold"
                 >
                   <Camera className="w-6 h-6 mr-3" />
                   Open Camera
@@ -516,10 +491,10 @@ export default function Kiosk() {
                 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200"></div>
+                    <div className="w-full border-t border-slate-700"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-slate-500">or</span>
+                    <span className="px-4 bg-slate-950 text-slate-500">or</span>
                   </div>
                 </div>
 
@@ -527,27 +502,12 @@ export default function Kiosk() {
                   onClick={() => document.getElementById('photo-upload').click()}
                   disabled={uploadingPhoto}
                   variant="outline"
-                  className="h-16 rounded-xl text-lg font-semibold"
+                  className="h-16 rounded-xl border-slate-700 text-white text-lg"
                 >
-                  {uploadingPhoto ? (
-                    <>
-                      <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-6 h-6 mr-3" />
-                      Upload Photo
-                    </>
-                  )}
+                  {uploadingPhoto ? <Loader2 className="w-6 h-6 mr-3 animate-spin" /> : <Upload className="w-6 h-6 mr-3" />}
+                  {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
                 </Button>
-                <input
-                  id="photo-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                <input id="photo-upload" type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </div>
             )}
           </motion.div>
@@ -560,36 +520,27 @@ export default function Kiosk() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full overflow-y-auto hide-scrollbar bg-gradient-to-br from-slate-50 to-white"
+            className="h-full overflow-y-auto hide-scrollbar"
             data-testid="gallery-step"
           >
             <div className="max-w-7xl mx-auto p-8 pt-20">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                  <h2 className="text-4xl font-bold">
-                    Select Products
-                  </h2>
-                  <p className="text-slate-600 mt-2">
-                    Choose up to 3 items to visualize ({selectedProducts.length}/3)
-                  </p>
+                  <h2 className="text-4xl font-bold">Select a Product</h2>
+                  <p className="text-slate-400 mt-2">Choose one item to visualize</p>
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button
-                    onClick={() => setShowFilters(!showFilters)}
-                    variant="outline"
-                    className="rounded-full h-12 px-6"
-                  >
-                    <SlidersHorizontal className="w-5 h-5 mr-2" />
-                    Filters
+                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="rounded-full h-12 px-6 border-slate-700 text-white">
+                    <SlidersHorizontal className="w-5 h-5 mr-2" /> Filters
                   </Button>
                   
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px] h-12 rounded-full">
+                    <SelectTrigger className="w-[180px] h-12 rounded-full border-slate-700 bg-transparent text-white">
                       <ArrowUpDown className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-slate-800 border-slate-700">
                       <SelectItem value="name">Name</SelectItem>
                       <SelectItem value="price-low">Price: Low to High</SelectItem>
                       <SelectItem value="price-high">Price: High to Low</SelectItem>
@@ -598,163 +549,102 @@ export default function Kiosk() {
                 </div>
               </div>
 
-              {/* Filters Panel */}
+              {/* Filters */}
               <AnimatePresence>
                 {showFilters && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="bg-white rounded-2xl border border-slate-100 p-6 mb-8 overflow-hidden"
+                    className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 mb-8 overflow-hidden"
                   >
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-semibold">Filters</h3>
-                      <Button onClick={resetFilters} variant="ghost" className="text-sm">
-                        Reset All
-                      </Button>
+                      <Button onClick={resetFilters} variant="ghost" className="text-sm text-slate-400">Reset All</Button>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <Label className="text-sm font-medium mb-4 block">
-                          Price Range: ₹{priceRange[0].toLocaleString('en-IN')} - ₹{priceRange[1].toLocaleString('en-IN')}
+                        <Label className="text-sm text-slate-400 mb-4 block">
+                          Price: ₹{priceRange[0].toLocaleString('en-IN')} - ₹{priceRange[1].toLocaleString('en-IN')}
                         </Label>
-                        <Slider
-                          min={0}
-                          max={maxPrice}
-                          step={100}
-                          value={priceRange}
-                          onValueChange={setPriceRange}
-                          className="mb-4"
-                        />
+                        <Slider min={0} max={maxPrice} step={100} value={priceRange} onValueChange={setPriceRange} />
                       </div>
                       
                       <div>
-                        <Label className="text-sm font-medium mb-4 block">Categories</Label>
+                        <Label className="text-sm text-slate-400 mb-4 block">Categories</Label>
                         <div className="flex flex-wrap gap-2">
-                          {getAllCategories().map(category => (
+                          {getAllCategories().map(cat => (
                             <button
-                              key={category}
-                              onClick={() => {
-                                if (selectedCategories.includes(category)) {
-                                  setSelectedCategories(selectedCategories.filter(c => c !== category));
-                                } else {
-                                  setSelectedCategories([...selectedCategories, category]);
-                                }
-                              }}
+                              key={cat}
+                              onClick={() => setSelectedCategories(prev => 
+                                prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+                              )}
                               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                selectedCategories.includes(category)
-                                  ? 'bg-violet-600 text-white'
-                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                selectedCategories.includes(cat) ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
                               }`}
                             >
-                              {category}
+                              {cat}
                             </button>
                           ))}
                         </div>
                       </div>
                     </div>
-                    
-                    {getAllTags().length > 0 && (
-                      <div className="mt-6">
-                        <Label className="text-sm font-medium mb-4 block">Tags/Materials</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {getAllTags().map(tag => (
-                            <button
-                              key={tag}
-                              onClick={() => {
-                                if (selectedTags.includes(tag)) {
-                                  setSelectedTags(selectedTags.filter(t => t !== tag));
-                                } else {
-                                  setSelectedTags([...selectedTags, tag]);
-                                }
-                              }}
-                              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                selectedTags.includes(tag)
-                                  ? 'bg-violet-600 text-white'
-                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                              }`}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Products Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-32">
-                {filteredInventory.map((product) => {
-                  const isSelected = selectedProducts.find(p => p.id === product.id);
-                  return (
-                    <motion.div
-                      key={product.id}
-                      data-testid={`product-${product.id}`}
-                      onClick={() => toggleProductSelection(product)}
-                      whileHover={{ y: -4 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`relative cursor-pointer rounded-2xl overflow-hidden bg-white border-2 transition-all ${
-                        isSelected 
-                          ? 'border-violet-600 shadow-xl ring-4 ring-violet-100' 
-                          : 'border-slate-100 hover:border-slate-300 shadow-md'
-                      }`}
-                    >
-                      <div className="aspect-square bg-slate-50 flex items-center justify-center">
-                        {product.image_url ? (
-                          <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="max-w-full max-h-full object-contain p-4"
-                          />
-                        ) : (
-                          <Eye className="w-16 h-16 text-slate-300" />
-                        )}
-                      </div>
-                      {isSelected && (
-                        <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center">
-                          <Check className="w-6 h-6 text-white" />
-                        </div>
+                {filteredInventory.map((product) => (
+                  <motion.div
+                    key={product.id}
+                    onClick={() => setSelectedProduct(product)}
+                    whileHover={{ y: -4 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`relative cursor-pointer rounded-2xl overflow-hidden bg-slate-900/50 border-2 transition-all ${
+                      selectedProduct?.id === product.id 
+                        ? 'border-violet-500 ring-4 ring-violet-500/20' 
+                        : 'border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="aspect-square bg-slate-800/50 flex items-center justify-center">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain p-4" />
+                      ) : (
+                        <Eye className="w-16 h-16 text-slate-700" />
                       )}
-                      <div className="p-4">
-                        <h3 className="font-semibold mb-1 truncate">{product.name}</h3>
-                        <p className="text-sm text-slate-600 mb-2">{product.category}</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-lg font-bold text-violet-600">₹{product.price.toLocaleString('en-IN')}</p>
-                          {product.tags?.length > 0 && (
-                            <span className="text-xs bg-slate-100 px-2 py-1 rounded-full">
-                              {product.tags[0]}
-                            </span>
-                          )}
-                        </div>
+                    </div>
+                    {selectedProduct?.id === product.id && (
+                      <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center">
+                        <Check className="w-6 h-6 text-white" />
                       </div>
-                    </motion.div>
-                  );
-                })}
+                    )}
+                    <div className="p-4">
+                      <h3 className="font-semibold truncate">{product.name}</h3>
+                      <p className="text-sm text-slate-400 mb-2">{product.category}</p>
+                      <p className="text-lg font-bold text-violet-400">₹{product.price?.toLocaleString('en-IN')}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
 
               {filteredInventory.length === 0 && (
                 <div className="text-center py-20 text-slate-500">
-                  <Eye className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-                  <p className="text-xl">No products match your filters.</p>
-                  <Button onClick={resetFilters} variant="link" className="mt-2">
-                    Reset filters
-                  </Button>
+                  <Eye className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+                  <p className="text-xl">No products available</p>
                 </div>
               )}
 
               {/* Floating Action Button */}
               <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
                 <Button
-                  data-testid="visualize-btn"
                   onClick={handleVisualize}
-                  disabled={selectedProducts.length === 0}
-                  className="h-16 px-12 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold shadow-2xl"
+                  disabled={!selectedProduct}
+                  className="h-16 px-12 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold shadow-2xl shadow-violet-500/30"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Visualize Now ({selectedProducts.length})
+                  Visualize Now
                 </Button>
               </div>
             </div>
@@ -768,130 +658,81 @@ export default function Kiosk() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-white"
-            data-testid="visualizing-step"
+            className="h-full flex items-center justify-center"
           >
             <div className="text-center">
-              <div className="relative mb-8">
-                <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center mx-auto">
-                  <Sparkles className="w-12 h-12 text-white animate-pulse" />
-                </div>
-                <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-violet-200 mx-auto animate-ping" />
-              </div>
-              <h2 className="text-4xl font-bold mb-4">
-                Creating Your Visualizations
-              </h2>
-              <p className="text-slate-600 text-lg">This may take a few moments...</p>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="w-24 h-24 rounded-full border-4 border-violet-500/30 border-t-violet-500 mx-auto mb-8"
+              />
+              <h2 className="text-4xl font-bold mb-4">Creating Your Visualization</h2>
+              <p className="text-slate-400 text-lg">AI is working its magic...</p>
             </div>
           </motion.div>
         )}
 
         {/* STEP 5: Results */}
-        {step === 'results' && results && (
+        {step === 'results' && result && (
           <motion.div
             key="results"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full p-8 pt-20 overflow-y-auto hide-scrollbar bg-gradient-to-br from-slate-50 to-white"
-            data-testid="results-step"
+            className="h-full p-8 pt-20 overflow-y-auto hide-scrollbar"
           >
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-2">
-                  Your Visualizations
-                </h2>
-                <p className="text-slate-600">
-                  See how the selected products look on you
-                </p>
+                <h2 className="text-4xl font-bold mb-2">Your Visualization</h2>
+                <p className="text-slate-400">See how {result.product.name} looks on you</p>
               </div>
 
-              <div className="space-y-8 mb-12">
-                {results.map((result, index) => (
-                  <div 
-                    key={index} 
-                    data-testid={`result-${index}`} 
-                    className="bg-white rounded-3xl border border-slate-100 shadow-xl p-6"
-                  >
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-2xl font-semibold">{result.product_name}</h3>
-                      {result.status === 'success' && (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                          AI Generated
-                        </span>
-                      )}
-                      {result.status === 'failed' && (
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
-                          Preview Only
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <p className="text-sm text-slate-500 mb-3 font-medium">Your Photo</p>
-                        <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[3/4]">
-                          <img src={photoUrl} alt="Original" className="w-full h-full object-cover" />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500 mb-3 font-medium">
-                          {result.result_image ? 'AI Visualization' : 'Product Preview'}
-                        </p>
-                        <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[3/4] flex items-center justify-center">
-                          {result.result_image ? (
-                            <img 
-                              src={result.result_image} 
-                              alt="AI Result" 
-                              className="w-full h-full object-cover" 
-                            />
-                          ) : result.product_image ? (
-                            <img 
-                              src={result.product_image} 
-                              alt="Product" 
-                              className="max-w-full max-h-full object-contain p-4" 
-                            />
-                          ) : (
-                            <div className="text-center p-8">
-                              <Sparkles className="w-16 h-16 text-violet-300 mx-auto mb-4" />
-                              <p className="text-slate-500">Processing...</p>
-                            </div>
-                          )}
-                        </div>
-                        {result.error && (
-                          <p className="text-sm text-amber-600 mt-2 text-center">{result.error}</p>
-                        )}
-                      </div>
+              <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-semibold">{result.product.name}</h3>
+                  {result.ai_image && (
+                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium">AI Generated</span>
+                  )}
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-slate-400 mb-3">Your Photo</p>
+                    <div className="rounded-2xl overflow-hidden bg-slate-800 aspect-[3/4]">
+                      <img src={customerPhotoUrl} alt="You" className="w-full h-full object-cover" />
                     </div>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-sm text-slate-400 mb-3">{result.ai_image ? 'AI Visualization' : 'Product'}</p>
+                    <div className="rounded-2xl overflow-hidden bg-slate-800 aspect-[3/4] flex items-center justify-center">
+                      {result.ai_image ? (
+                        <img src={result.ai_image} alt="Result" className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={result.product.image_url} alt="Product" className="max-w-full max-h-full object-contain p-4" />
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Share Section */}
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 text-center">
+              {/* Share */}
+              <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-8 text-center">
                 <h3 className="text-2xl font-semibold mb-6">Share Your Experience</h3>
                 
                 <div className="flex flex-col items-center gap-6">
-                  <div data-testid="whatsapp-qr" className="bg-slate-50 p-6 rounded-2xl">
-                    <QRCodeSVG value={generateWhatsAppLink()} size={180} />
+                  <div className="bg-white p-4 rounded-2xl">
+                    <QRCodeSVG value={generateWhatsAppLink()} size={160} />
                   </div>
-                  <p className="text-slate-600">Scan to share via WhatsApp</p>
+                  <p className="text-slate-400">Scan to share via WhatsApp</p>
 
                   <div className="flex gap-4">
                     <Button
-                      data-testid="share-whatsapp-btn"
                       onClick={() => window.open(generateWhatsAppLink(), '_blank')}
-                      className="h-14 px-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold"
+                      className="h-14 px-8 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold"
                     >
-                      <Share2 className="w-5 h-5 mr-3" />
-                      Share to WhatsApp
+                      <Share2 className="w-5 h-5 mr-3" /> Share to WhatsApp
                     </Button>
-
-                    <Button
-                      data-testid="try-again-btn"
-                      onClick={handleRestart}
-                      variant="outline"
-                      className="h-14 px-8 rounded-full text-lg font-semibold"
-                    >
+                    <Button onClick={handleRestart} variant="outline" className="h-14 px-8 rounded-full border-slate-700 text-white text-lg">
                       Try Again
                     </Button>
                   </div>
@@ -904,38 +745,24 @@ export default function Kiosk() {
 
       {/* PIN Dialog */}
       <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
-        <DialogContent className="bg-white" data-testid="pin-dialog">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Enter Admin PIN</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
-              data-testid="pin-input"
               type="password"
               maxLength="4"
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
               placeholder="Enter 4-digit PIN"
-              className="h-14 rounded-xl text-center text-2xl tracking-widest"
+              className="h-14 rounded-xl bg-slate-800 border-slate-700 text-center text-2xl tracking-widest text-white"
             />
             <div className="flex gap-4">
-              <Button
-                data-testid="pin-cancel-btn"
-                onClick={() => {
-                  setShowPinDialog(false);
-                  setPin('');
-                }}
-                variant="outline"
-                className="flex-1 h-12 rounded-xl"
-              >
+              <Button onClick={() => { setShowPinDialog(false); setPin(''); }} variant="outline" className="flex-1 h-12 rounded-xl border-slate-700 text-white">
                 Cancel
               </Button>
-              <Button
-                data-testid="pin-verify-btn"
-                onClick={handlePinVerify}
-                disabled={pin.length !== 4}
-                className="flex-1 h-12 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
-              >
+              <Button onClick={handlePinVerify} disabled={pin.length !== 4} className="flex-1 h-12 rounded-xl bg-violet-600 text-white">
                 Verify
               </Button>
             </div>
