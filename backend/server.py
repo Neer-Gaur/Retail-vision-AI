@@ -384,32 +384,26 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
 
 @api_router.get("/analytics")
 async def get_analytics(current_user = Depends(get_current_user)):
-    if current_user['role'] == 'founder':
-        total_tryons = await db.visualizations.count_documents({})
-        total_tenants = await db.tenants.count_documents({})
-        
-        return {
-            'total_tryons': total_tryons,
-            'total_tenants': total_tenants,
-            'gpu_health': 'Operational'
-        }
-    
     tenant_id = current_user.get('tenant_id')
     if not tenant_id:
         raise HTTPException(status_code=403, detail="No tenant associated")
     
+    # Basic counts
     total_visualizations = await db.visualizations.count_documents({'tenant_id': tenant_id})
     total_leads = await db.leads.count_documents({'tenant_id': tenant_id})
+    total_products = await db.inventory.count_documents({'tenant_id': tenant_id})
     
+    # Visualizations data
     visualizations = await db.visualizations.find({'tenant_id': tenant_id}, {'_id': 0}).to_list(1000)
     
+    # Product visualization count
     product_count = {}
     for viz in visualizations:
         for prod_id in viz.get('product_ids', []):
             product_count[prod_id] = product_count.get(prod_id, 0) + 1
     
+    # Top products
     top_products = sorted(product_count.items(), key=lambda x: x[1], reverse=True)[:5]
-    
     top_products_details = []
     for prod_id, count in top_products:
         product = await db.inventory.find_one({'id': prod_id, 'tenant_id': tenant_id}, {'_id': 0})
@@ -419,10 +413,70 @@ async def get_analytics(current_user = Depends(get_current_user)):
                 'visualization_count': count
             })
     
+    # Time-based analytics (last 7 days)
+    from datetime import timedelta
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    daily_visualizations = {}
+    daily_leads = {}
+    
+    for viz in visualizations:
+        created_at = datetime.fromisoformat(viz['created_at'])
+        if created_at >= seven_days_ago:
+            date_key = created_at.strftime('%Y-%m-%d')
+            daily_visualizations[date_key] = daily_visualizations.get(date_key, 0) + 1
+    
+    leads = await db.leads.find({'tenant_id': tenant_id}, {'_id': 0}).to_list(1000)
+    for lead in leads:
+        created_at = datetime.fromisoformat(lead['created_at'])
+        if created_at >= seven_days_ago:
+            date_key = created_at.strftime('%Y-%m-%d')
+            daily_leads[date_key] = daily_leads.get(date_key, 0) + 1
+    
+    # Low stock alerts
+    low_stock_items = await db.inventory.find(
+        {'tenant_id': tenant_id, 'stock': {'$lte': 5, '$gt': 0}},
+        {'_id': 0}
+    ).sort('stock', 1).to_list(10)
+    
+    # Out of stock items
+    out_of_stock = await db.inventory.count_documents({'tenant_id': tenant_id, 'stock': 0})
+    
+    # Conversion rate (leads that resulted in visualizations)
+    leads_with_viz = len(set([viz.get('lead_id') for viz in visualizations]))
+    conversion_rate = (leads_with_viz / total_leads * 100) if total_leads > 0 else 0
+    
+    # Peak hours analysis
+    hour_distribution = {}
+    for viz in visualizations:
+        created_at = datetime.fromisoformat(viz['created_at'])
+        hour = created_at.hour
+        hour_distribution[hour] = hour_distribution.get(hour, 0) + 1
+    
+    peak_hours = sorted(hour_distribution.items(), key=lambda x: x[1], reverse=True)[:3]
+    
+    # Category performance
+    category_stats = {}
+    products = await db.inventory.find({'tenant_id': tenant_id}, {'_id': 0}).to_list(1000)
+    for product in products:
+        category = product.get('category', 'Uncategorized')
+        if category not in category_stats:
+            category_stats[category] = {'total_items': 0, 'total_stock': 0, 'visualizations': 0}
+        category_stats[category]['total_items'] += 1
+        category_stats[category]['total_stock'] += product.get('stock', 0)
+        category_stats[category]['visualizations'] += product_count.get(product['id'], 0)
+    
     return {
         'total_visualizations': total_visualizations,
         'total_leads': total_leads,
-        'most_visualized': top_products_details
+        'total_products': total_products,
+        'most_visualized': top_products_details,
+        'daily_visualizations': daily_visualizations,
+        'daily_leads': daily_leads,
+        'low_stock_items': low_stock_items,
+        'out_of_stock_count': out_of_stock,
+        'conversion_rate': round(conversion_rate, 2),
+        'peak_hours': peak_hours,
+        'category_performance': category_stats
     }
 
 app.include_router(api_router)
