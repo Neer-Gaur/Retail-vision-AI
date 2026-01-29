@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { inventoryAPI, leadsAPI, visualizationAPI, authAPI } from '@/services/api';
 import { toast } from 'sonner';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function KioskMode() {
   const navigate = useNavigate();
