@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Package, Users, Eye, TrendingUp, ArrowRight, Plus,
-  ShoppingBag, Sparkles, Target, Clock
+  ShoppingBag, Sparkles, Target, Clock, Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../store/authStore';
