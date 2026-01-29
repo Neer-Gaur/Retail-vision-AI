@@ -1,101 +1,73 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { Eye, Sparkles, Zap, Shield, ArrowRight, Star, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Sparkles, Zap, Shield, ArrowRight, Star, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Lenis from '@studio-freight/lenis';
-
-const reviews = [
-  { name: 'Priya Sharma', role: 'Saree Boutique Owner', text: 'Increased customer engagement by 300%! The AI visualization is mind-blowing.', rating: 5 },
-  { name: 'Rajesh Kumar', role: 'Tile Showroom', text: 'Our customers love seeing tiles on their walls before buying. Game changer!', rating: 5 },
-  { name: 'Anita Desai', role: 'Fashion Store', text: 'The kiosk mode is perfect for our showroom. Customers spend more time exploring.', rating: 5 },
-  { name: 'Vikram Patel', role: 'Retail Manager', text: 'Easy to manage inventory and track analytics. Best investment for our business.', rating: 5 },
-  { name: 'Meera Reddy', role: 'Boutique Owner', text: 'The WhatsApp integration is brilliant. Customers share their try-ons instantly!', rating: 5 },
-  { name: 'Arjun Singh', role: 'Showroom Director', text: 'Professional, modern, and exactly what we needed. Highly recommended!', rating: 5 }
-];
+import { useAuthStore } from '../store/authStore';
 
 const features = [
   {
     icon: Sparkles,
     title: 'AI-Powered Visualization',
-    description: 'Let customers see products on themselves with cutting-edge AI technology',
-    gradient: 'from-slate-900 to-slate-700'
+    description: 'Revolutionary virtual try-on technology for fashion and tiles'
   },
   {
     icon: Zap,
-    title: 'Kiosk Mode',
-    description: 'Secure fullscreen experience designed for physical showrooms with PIN protection',
-    gradient: 'from-slate-800 to-slate-600'
+    title: 'Smart Kiosk Mode',
+    description: 'Secure fullscreen experience designed for physical showrooms'
   },
   {
     icon: Shield,
-    title: 'Multi-Tenant SaaS',
-    description: 'Complete data isolation, dedicated dashboards, and analytics for each business',
-    gradient: 'from-slate-700 to-slate-500'
+    title: 'Multi-Tenant Architecture',
+    description: 'Complete data isolation with enterprise-grade security'
   }
 ];
 
 const stats = [
+  { value: '10K+', label: 'Visualizations' },
   { value: '500+', label: 'Showrooms' },
-  { value: '50K+', label: 'Visualizations' },
   { value: '98%', label: 'Satisfaction' },
   { value: '24/7', label: 'Support' }
 ];
 
+const testimonials = [
+  { name: 'Priya Sharma', role: 'Fashion Boutique', text: 'Revolutionary! Customer engagement increased by 300%', rating: 5 },
+  { name: 'Rajesh Kumar', role: 'Tile Showroom', text: 'Game changer for our business. Customers love it!', rating: 5 },
+  { name: 'Anita Desai', role: 'Retail Manager', text: 'The best investment we made this year', rating: 5 }
+];
+
 export default function Landing() {
   const navigate = useNavigate();
-  const containerRef = useRef(null);
-  const { scrollYProgress } = useScroll();
-  const opacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
+  const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true
-    });
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
-
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    if (token && role === 'founder') {
-      navigate('/founder');
-    } else if (token && role === 'owner') {
-      navigate('/dashboard');
-    }
-
-    return () => {
-      lenis.destroy();
-    };
-  }, [navigate]);
+  React.useEffect(() => {
+    if (user) navigate('/dashboard');
+  }, [user, navigate]);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-white noise-bg overflow-x-hidden">
+    <div className="min-h-screen bg-white overflow-hidden">
+      {/* Mesh Background */}
+      <div className="fixed inset-0 gradient-mesh opacity-40 -z-10" />
+
       {/* Navigation */}
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 glass-light"
+        className="fixed top-0 left-0 right-0 z-50 glass border-b border-slate-200/50"
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center gap-3"
           >
-            <Eye className="w-8 h-8 text-black" />
-            <span className="text-2xl font-bold tracking-tight">Retail-Vision AI</span>
+            <div className="w-10 h-10 rounded-2xl gradient-primary flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold">RetailVision AI</span>
           </motion.div>
 
           <div className="flex gap-4">
             <Button
-              data-testid="nav-login-btn"
               onClick={() => navigate('/login')}
               variant="ghost"
               className="rounded-full"
@@ -103,9 +75,8 @@ export default function Landing() {
               Login
             </Button>
             <Button
-              data-testid="nav-signup-btn"
               onClick={() => navigate('/signup')}
-              className="btn-primary"
+              className="rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
             >
               Get Started
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -115,66 +86,69 @@ export default function Landing() {
       </motion.nav>
 
       {/* Hero Section */}
-      <motion.section
-        style={{ opacity, scale }}
-        className="min-h-screen flex items-center justify-center px-6 pt-24 pb-12"
-      >
-        <div className="max-w-7xl mx-auto text-center">
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
           >
             <div className="inline-block mb-6">
-              <span className="px-4 py-2 bg-slate-100 rounded-full text-sm font-medium text-slate-900">
-                The Future of Retail is Here
+              <span className="px-6 py-3 bg-gradient-to-r from-violet-100 to-purple-100 rounded-full text-sm font-semibold text-violet-900">
+                ✨ The Future of Retail is Here
               </span>
             </div>
-            <h1 className="text-6xl md:text-8xl font-light tracking-tight mb-6 gradient-text">
+            <h1 className="text-6xl md:text-8xl font-bold tracking-tight mb-8">
               Transform Your
               <br />
-              <span className="font-bold">Showroom Experience</span>
+              <span className="text-gradient">Showroom Experience</span>
             </h1>
-            <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto mb-12">
-              AI-powered visualization for Saree & Tile showrooms. Let customers see before they buy.
+            <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
+              AI-powered virtual try-on for fashion and tile showrooms. Let customers visualize products instantly.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
-                data-testid="hero-cta-btn"
                 onClick={() => navigate('/signup')}
-                className="btn-primary text-lg h-14 px-12"
+                size="lg"
+                className="rounded-full h-14 px-8 text-lg bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button
                 onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-                className="btn-secondary text-lg h-14 px-12"
+                size="lg"
+                variant="outline"
+                className="rounded-full h-14 px-8 text-lg"
               >
                 Watch Demo
               </Button>
             </div>
           </motion.div>
 
+          {/* Hero Image */}
           <motion.div
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="mt-20"
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="relative"
           >
-            <div className="bg-white rounded-3xl shadow-floating p-2 max-w-5xl mx-auto">
+            <div className="glass rounded-3xl p-4 shadow-2xl">
               <img
-                src="https://images.unsplash.com/photo-1720247520862-7e4b14176fa8?auto=format&fit=crop&w=1600&q=80"
+                src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80"
                 alt="Showroom"
                 className="w-full rounded-2xl"
               />
             </div>
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-r from-violet-400 to-purple-400 rounded-full blur-3xl opacity-60 animate-float" />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full blur-3xl opacity-60 animate-float" style={{ animationDelay: '2s' }} />
           </motion.div>
         </div>
-      </motion.section>
+      </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-slate-50">
+      <section className="py-20 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
@@ -186,8 +160,8 @@ export default function Landing() {
                 viewport={{ once: true }}
                 className="text-center"
               >
-                <div className="text-4xl md:text-5xl font-bold mb-2">{stat.value}</div>
-                <div className="text-slate-600">{stat.label}</div>
+                <div className="text-5xl font-bold text-gradient mb-2">{stat.value}</div>
+                <div className="text-slate-600 font-medium">{stat.label}</div>
               </motion.div>
             ))}
           </div>
@@ -200,12 +174,11 @@ export default function Landing() {
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
             className="text-center mb-20"
           >
-            <h2 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
-              Everything You <span className="font-bold">Need</span>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6">
+              Everything You <span className="text-gradient">Need</span>
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
               Powerful features designed for modern showrooms
@@ -222,14 +195,13 @@ export default function Landing() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                  data-testid={`feature-card-${index + 1}`}
-                  className="bg-white rounded-2xl border border-slate-100 p-8 shadow-soft hover:shadow-floating transition-all"
+                  whileHover={{ y: -8 }}
+                  className="glass rounded-3xl p-8 hover:shadow-2xl transition-all"
                 >
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6`}>
-                    <Icon className="w-7 h-7 text-white" />
+                  <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mb-6">
+                    <Icon className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-semibold mb-4">{feature.title}</h3>
+                  <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
                   <p className="text-slate-600 leading-relaxed">{feature.description}</p>
                 </motion.div>
               );
@@ -238,79 +210,40 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-32 bg-slate-50 px-6">
+      {/* Testimonials */}
+      <section className="py-32 px-6 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
-              How It <span className="font-bold">Works</span>
+            className="text-center mb-16">
+            <h2 className="text-5xl font-bold mb-4">
+              Loved by <span className="text-gradient">Thousands</span>
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-12">
-            {[
-              { step: '01', title: 'Capture Photo', desc: 'Customer takes a photo at your kiosk with smart overlays' },
-              { step: '02', title: 'Select Products', desc: 'Browse and select up to 3 items from your inventory' },
-              { step: '03', title: 'See Results', desc: 'AI generates realistic visualizations in seconds' }
-            ].map((item, index) => (
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, x: -40 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                className="text-center"
-              >
-                <div className="text-7xl font-bold text-slate-200 mb-4">{item.step}</div>
-                <h3 className="text-2xl font-semibold mb-3">{item.title}</h3>
-                <p className="text-slate-600">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Customer Reviews */}
-      <section className="py-32 px-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center"
-          >
-            <h2 className="text-5xl md:text-6xl font-light tracking-tight mb-6">
-              Loved by <span className="font-bold">Thousands</span>
-            </h2>
-            <p className="text-xl text-slate-600">See what our customers say</p>
-          </motion.div>
-        </div>
-
-        <div className="marquee">
-          <div className="marquee-content">
-            {[...reviews, ...reviews].map((review, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl border border-slate-100 p-6 shadow-soft min-w-[400px]"
+                className="glass rounded-3xl p-8"
               >
                 <div className="flex gap-1 mb-4">
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-black text-black" />
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <p className="text-slate-700 mb-4 leading-relaxed">"{review.text}"</p>
+                <p className="text-slate-700 mb-6 leading-relaxed">"{testimonial.text}"</p>
                 <div>
-                  <div className="font-semibold">{review.name}</div>
-                  <div className="text-sm text-slate-500">{review.role}</div>
+                  <div className="font-bold">{testimonial.name}</div>
+                  <div className="text-sm text-slate-500">{testimonial.role}</div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -322,30 +255,32 @@ export default function Landing() {
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="bg-black text-white rounded-3xl p-12 md:p-16"
+            className="glass-dark rounded-3xl p-16 text-white relative overflow-hidden"
           >
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              Ready to Transform Your Business?
-            </h2>
-            <p className="text-xl text-slate-300 mb-8">
-              Join hundreds of showrooms already using Retail-Vision AI
-            </p>
-            <Button
-              data-testid="cta-signup-btn"
-              onClick={() => navigate('/signup')}
-              className="h-14 px-12 text-lg rounded-full bg-white text-black hover:bg-slate-100 hover:scale-105 transition-all"
-            >
-              Start Free Trial
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <div className="mt-8 flex items-center justify-center gap-6 text-sm text-slate-400">
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4" /> No credit card required
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4" /> 14-day free trial
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-purple-600 opacity-90" />
+            <div className="relative z-10">
+              <h2 className="text-5xl font-bold mb-6">
+                Ready to Transform Your Business?
+              </h2>
+              <p className="text-xl text-white/90 mb-8">
+                Join hundreds of showrooms already using RetailVision AI
+              </p>
+              <Button
+                onClick={() => navigate('/signup')}
+                size="lg"
+                className="rounded-full h-14 px-12 text-lg bg-white text-violet-600 hover:bg-slate-100"
+              >
+                Start Free Trial
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white/80">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> No credit card required
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> 14-day free trial
+                </div>
               </div>
             </div>
           </motion.div>
@@ -353,15 +288,15 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-slate-100">
+      <footer className="py-12 px-6 border-t border-slate-200">
         <div className="max-w-7xl mx-auto text-center text-slate-600">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Eye className="w-6 h-6" />
-            <span className="font-semibold text-black">Retail-Vision AI</span>
+            <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-slate-900">RetailVision AI</span>
           </div>
-          <p className="text-sm">
-            © 2025 Retail-Vision AI. All rights reserved.
-          </p>
+          <p className="text-sm">© 2025 RetailVision AI. All rights reserved.</p>
         </div>
       </footer>
     </div>
