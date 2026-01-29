@@ -958,7 +958,7 @@ export default function Kiosk() {
                       variant="outline" 
                       className="flex-1 h-16 px-8 rounded-2xl border-2 border-violet-500 bg-slate-800/50 text-white text-lg font-semibold hover:bg-violet-600 hover:border-violet-400 transition-all"
                     >
-                      <Sparkles className="w-6 h-6 mr-3" /> Try Another Look
+                      <Sparkles className="w-6 h-6 mr-3" /> Try Another Item
                     </Button>
                   </div>
                 </div>
