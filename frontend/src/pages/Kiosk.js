@@ -679,10 +679,20 @@ export default function Kiosk() {
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 className="w-24 h-24 rounded-full border-4 border-violet-500/30 border-t-violet-500 mx-auto mb-8"
               />
-              <h2 className="text-4xl font-bold mb-4">Creating Your Visualization</h2>
-              <p className="text-slate-400 text-lg">AI is working its magic...</p>
+              <h2 className="text-4xl font-bold text-white mb-4">Creating Your Visualization</h2>
+              <p className="text-slate-300 text-lg">AI is working its magic...</p>
             </div>
           </motion.div>
+        )}
+
+        {/* Empty State */}
+        {step === 'gallery' && filteredInventory.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center py-20 text-slate-400">
+              <Eye className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+              <p className="text-xl">No products available</p>
+            </div>
+          </div>
         )}
 
         {/* STEP 5: Results */}
