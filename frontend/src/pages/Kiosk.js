@@ -244,7 +244,7 @@ export default function Kiosk() {
         canvas.width = customerImg.width;
         canvas.height = customerImg.height;
         
-        // Draw customer photo
+        // Draw customer photo as base
         ctx.drawImage(customerImg, 0, 0);
         
         // Load and overlay product image
@@ -252,24 +252,18 @@ export default function Kiosk() {
         productImg.crossOrigin = 'anonymous';
         
         productImg.onload = () => {
-          // Calculate product overlay position (center-bottom)
-          const productWidth = canvas.width * 0.6;
+          // Calculate product overlay position (center-bottom, natural product size)
+          const productWidth = canvas.width * 0.5;
           const productHeight = (productImg.height / productImg.width) * productWidth;
           const x = (canvas.width - productWidth) / 2;
-          const y = canvas.height - productHeight - 50;
+          const y = canvas.height - productHeight - 20;
           
           // Apply semi-transparency for preview effect
-          ctx.globalAlpha = 0.7;
+          ctx.globalAlpha = 0.8;
           ctx.drawImage(productImg, x, y, productWidth, productHeight);
           
-          // Add "Preview Mode" watermark
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = 'rgba(139, 92, 246, 0.9)';
-          ctx.font = 'bold 24px Arial';
-          ctx.fillText('PREVIEW MODE', 20, 40);
-          
-          // Convert to data URL
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          // Convert to data URL - NO WATERMARK for clean look
+          resolve(canvas.toDataURL('image/jpeg', 0.95));
         };
         
         productImg.onerror = () => reject(new Error('Failed to load product image'));
