@@ -13,7 +13,6 @@ export default function Signup() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('owner');
   const [shopName, setShopName] = useState('');
   const [industry, setIndustry] = useState('fashion');
   const [adminPin, setAdminPin] = useState('1234');
@@ -27,14 +26,11 @@ export default function Signup() {
       const data = {
         email,
         password,
-        role
+        role: 'owner',
+        shop_name: shopName,
+        industry: industry,
+        admin_pin: adminPin
       };
-
-      if (role === 'owner') {
-        data.shop_name = shopName;
-        data.industry = industry;
-        data.admin_pin = adminPin;
-      }
 
       const response = await authAPI.signup(data);
       localStorage.setItem('token', response.token);
@@ -43,12 +39,7 @@ export default function Signup() {
       localStorage.setItem('industry', response.industry || '');
 
       toast.success('Account created successfully!');
-
-      if (response.role === 'founder') {
-        navigate('/founder');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Signup failed');
     } finally {
@@ -76,22 +67,22 @@ export default function Signup() {
         <div className="bg-white rounded-3xl border border-slate-100 shadow-soft p-8">
           <div className="flex items-center gap-3 mb-8">
             <Eye className="w-8 h-8 text-black" />
-            <h1 className="text-3xl font-bold">Sign Up</h1>
+            <h1 className="text-3xl font-bold">Create Your Account</h1>
           </div>
 
           <form onSubmit={handleSignup} className="space-y-6">
             <div>
-              <Label className="text-sm text-slate-700 mb-3 block font-medium">Account Type</Label>
-              <RadioGroup value={role} onValueChange={setRole} className="space-y-3">
-                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-                  <RadioGroupItem data-testid="role-owner" value="owner" id="owner" />
-                  <Label htmlFor="owner" className="cursor-pointer flex-1">Shop Owner</Label>
-                </div>
-                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-                  <RadioGroupItem data-testid="role-founder" value="founder" id="founder" />
-                  <Label htmlFor="founder" className="cursor-pointer flex-1">Founder (God View)</Label>
-                </div>
-              </RadioGroup>
+              <Label htmlFor="shopName" className="text-sm text-slate-700 mb-2 block font-medium">
+                Shop Name
+              </Label>
+              <Input
+                data-testid="signup-shopname-input"
+                id="shopName"
+                value={shopName}
+                onChange={(e) => setShopName(e.target.value)}
+                required
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
+              />
             </div>
 
             <div>
@@ -124,53 +115,35 @@ export default function Signup() {
               />
             </div>
 
-            {role === 'owner' && (
-              <>
-                <div>
-                  <Label htmlFor="shopName" className="text-sm text-slate-700 mb-2 block font-medium">
-                    Shop Name
-                  </Label>
-                  <Input
-                    data-testid="signup-shopname-input"
-                    id="shopName"
-                    value={shopName}
-                    onChange={(e) => setShopName(e.target.value)}
-                    required
-                    className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
-                  />
+            <div>
+              <Label className="text-sm text-slate-700 mb-3 block font-medium">Industry</Label>
+              <RadioGroup value={industry} onValueChange={setIndustry} className="space-y-3">
+                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
+                  <RadioGroupItem data-testid="industry-fashion" value="fashion" id="fashion" />
+                  <Label htmlFor="fashion" className="cursor-pointer flex-1">Fashion (Sarees)</Label>
                 </div>
+                <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
+                  <RadioGroupItem data-testid="industry-tiles" value="tiles" id="tiles" />
+                  <Label htmlFor="tiles" className="cursor-pointer flex-1">Tiles</Label>
+                </div>
+              </RadioGroup>
+            </div>
 
-                <div>
-                  <Label className="text-sm text-slate-700 mb-3 block font-medium">Industry</Label>
-                  <RadioGroup value={industry} onValueChange={setIndustry} className="space-y-3">
-                    <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-                      <RadioGroupItem data-testid="industry-fashion" value="fashion" id="fashion" />
-                      <Label htmlFor="fashion" className="cursor-pointer flex-1">Fashion (Sarees)</Label>
-                    </div>
-                    <div className="flex items-center space-x-3 bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-colors">
-                      <RadioGroupItem data-testid="industry-tiles" value="tiles" id="tiles" />
-                      <Label htmlFor="tiles" className="cursor-pointer flex-1">Tiles</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div>
-                  <Label htmlFor="adminPin" className="text-sm text-slate-700 mb-2 block font-medium">
-                    Kiosk Exit PIN (4 digits)
-                  </Label>
-                  <Input
-                    data-testid="signup-pin-input"
-                    id="adminPin"
-                    type="text"
-                    maxLength="4"
-                    value={adminPin}
-                    onChange={(e) => setAdminPin(e.target.value)}
-                    required
-                    className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
-                  />
-                </div>
-              </>
-            )}
+            <div>
+              <Label htmlFor="adminPin" className="text-sm text-slate-700 mb-2 block font-medium">
+                Kiosk Exit PIN (4 digits)
+              </Label>
+              <Input
+                data-testid="signup-pin-input"
+                id="adminPin"
+                type="text"
+                maxLength="4"
+                value={adminPin}
+                onChange={(e) => setAdminPin(e.target.value)}
+                required
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-black/5"
+              />
+            </div>
 
             <Button
               data-testid="signup-submit-btn"
