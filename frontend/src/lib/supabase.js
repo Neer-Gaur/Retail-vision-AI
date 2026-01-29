@@ -7,16 +7,36 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper to get current shop
 export const getCurrentShop = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  
-  const { data: shop } = await supabase
-    .from('shops')
-    .select('*')
-    .eq('owner_email', user.email)
-    .single();
-  
-  return shop;
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Error getting user:', userError);
+      return null;
+    }
+    if (!user) {
+      console.log('No user logged in');
+      return null;
+    }
+    
+    console.log('Fetching shop for email:', user.email);
+    
+    const { data: shop, error: shopError } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('owner_email', user.email)
+      .single();
+    
+    if (shopError) {
+      console.error('Error fetching shop:', shopError);
+      return null;
+    }
+    
+    console.log('Shop loaded:', shop);
+    return shop;
+  } catch (error) {
+    console.error('getCurrentShop error:', error);
+    return null;
+  }
 };
 
 // Upload image to storage
