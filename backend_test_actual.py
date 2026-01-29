@@ -45,6 +45,9 @@ class RetailVisionAPITester:
                 response = requests.post(url, json=data, headers=headers, timeout=timeout)
             
             return response
+        except requests.exceptions.Timeout:
+            print(f"Request timed out after {timeout} seconds")
+            return None
         except Exception as e:
             print(f"Request failed: {str(e)}")
             return None
