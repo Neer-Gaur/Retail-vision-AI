@@ -244,11 +244,10 @@
 
 ## test_plan:
   current_focus:
-    - "Kiosk Mode"
-  stuck_tasks:
-    - "Kiosk Mode"
+    - "All major fixes verified"
+  stuck_tasks: []
   test_all: false
-  test_priority: "stuck_first"
+  test_priority: "high_first"
 
 ## agent_communication:
     - agent: "main"
