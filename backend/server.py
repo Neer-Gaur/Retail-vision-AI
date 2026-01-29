@@ -266,6 +266,40 @@ async def get_leads(current_user = Depends(get_current_user)):
     leads = await db.leads.find({'tenant_id': tenant_id}, {'_id': 0}).sort('created_at', -1).to_list(1000)
     return leads
 
+async def nano_banana_visualization(product_name: str, user_photo_base64: str, industry: str):
+    """
+    Use Gemini Nano Banana for AI visualization
+    """
+    try:
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise Exception("EMERGENT_LLM_KEY not configured")
+        
+        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="You are an AI visualization assistant")
+        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
+        
+        if industry == 'fashion':
+            prompt = f"Edit this photo to show the person wearing {product_name}. Make it look natural and professional, like a showroom try-on. Keep the background and lighting similar."
+        else:
+            prompt = f"Edit this photo to show {product_name} installed in this space. Make it look realistic and professional, as if it's actually there."
+        
+        msg = UserMessage(
+            text=prompt,
+            file_contents=[ImageContent(user_photo_base64)]
+        )
+        
+        text, images = await chat.send_message_multimodal_response(msg)
+        
+        if images and len(images) > 0:
+            image_data = images[0]['data']
+            mime_type = images[0].get('mime_type', 'image/png')
+            return f"data:{mime_type};base64,{image_data}"
+        
+        return None
+    except Exception as e:
+        logging.error(f"Nano Banana error: {str(e)}")
+        return None
+
 async def mock_ai_visualization(product_name: str, industry: str):
     """
     Mock AI visualization for demo purposes.
