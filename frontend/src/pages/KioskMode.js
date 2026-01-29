@@ -55,7 +55,7 @@ export default function KioskMode() {
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [inventory, priceRange, selectedTags, sortBy]);
+  }, [inventory, priceRange, selectedTags, selectedCategories, sortBy]);
 
   const loadInventory = async () => {
     try {
