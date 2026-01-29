@@ -254,26 +254,39 @@ export default function Kiosk() {
       });
 
       let aiResult = null;
+      let resultImageUrl = null;
       
       if (response.ok) {
         const data = await response.json();
         aiResult = data.results?.[0] || null;
+        
+        // If AI generated an image, upload it to Supabase storage
+        if (aiResult?.result_image && aiResult.status === 'success') {
+          try {
+            const { uploadBase64Image } = await import('../lib/supabase');
+            resultImageUrl = await uploadBase64Image(aiResult.result_image, 'customer-uploads');
+          } catch (uploadError) {
+            console.error('Failed to upload result image:', uploadError);
+            // Still use the base64 image if upload fails
+            resultImageUrl = aiResult.result_image;
+          }
+        }
       }
 
-      // Save visualization record
+      // Save visualization record with correct column names
       await supabase
         .from('visualizations')
         .insert([{
           shop_id: shop.id,
           lead_id: leadId,
-          customer_photo_url: customerPhotoUrl,
-          product_id: selectedProduct.id,
-          result_photo_url: aiResult?.result_image || null
+          input_photo_url: customerPhotoUrl,
+          result_photo_url: resultImageUrl || null,
+          items_compared: [selectedProduct.id]
         }]);
 
       setResult({
         product: selectedProduct,
-        ai_image: aiResult?.result_image || null,
+        ai_image: resultImageUrl || aiResult?.result_image || null,
         status: aiResult?.status || 'failed',
         error: aiResult?.error || null
       });
