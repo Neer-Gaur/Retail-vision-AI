@@ -1,19 +1,35 @@
 import { create } from 'zustand';
 import { supabase, getCurrentShop } from '../lib/supabase';
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
   shop: null,
   loading: true,
   
   initialize: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user) {
-      const shop = await getCurrentShop();
-      set({ user: session.user, shop, loading: false });
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const shop = await getCurrentShop();
+        set({ user: session.user, shop, loading: false });
+      } else {
+        set({ user: null, shop: null, loading: false });
+      }
+    } catch (error) {
+      console.error('Initialize error:', error);
       set({ user: null, shop: null, loading: false });
+    }
+  },
+  
+  refreshShop: async () => {
+    try {
+      const shop = await getCurrentShop();
+      set({ shop });
+      return shop;
+    } catch (error) {
+      console.error('Refresh shop error:', error);
+      return null;
     }
   },
   
@@ -39,17 +55,14 @@ export const useAuthStore = create((set) => ({
     
     if (authError) throw authError;
     
-    // Create shop entry
+    // Create shop entry - only include columns that exist in your schema
     const { data: shopEntry, error: shopError } = await supabase
       .from('shops')
       .insert([{
         owner_email: email,
         shop_name: shopData.shop_name,
         industry: shopData.industry,
-        admin_pin: shopData.admin_pin || '1234',
-        logo_url: '',
-        brand_color: shopData.industry === 'fashion' ? '#FF6B6B' : '#4ECDC4',
-        subscription_status: 'trial'
+        admin_pin: shopData.admin_pin || '1234'
       }])
       .select()
       .single();
