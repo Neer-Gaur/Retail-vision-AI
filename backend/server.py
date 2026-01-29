@@ -331,7 +331,6 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
     if not tenant_id:
         raise HTTPException(status_code=403, detail="No tenant associated")
     
-    # Get tenant industry
     tenant_doc = await db.tenants.find_one({'id': tenant_id}, {'_id': 0})
     industry = tenant_doc.get('industry', 'fashion') if tenant_doc else 'fashion'
     
@@ -342,40 +341,27 @@ async def create_visualization(viz: VisualizationRequest, current_user = Depends
     
     results = []
     
-    # Check if FAL_KEY is available for real AI, otherwise use mock
-    fal_key = os.environ.get('FAL_KEY')
-    use_real_ai = fal_key and fal_key != ''
+    # Extract base64 from data URL if present
+    user_photo_base64 = viz.photo_url
+    if viz.photo_url and viz.photo_url.startswith('data:'):
+        user_photo_base64 = viz.photo_url.split(',')[1]
     
     for product in products:
         try:
-            if use_real_ai:
-                # Real AI visualization using FAL.AI
-                os.environ['FAL_KEY'] = fal_key
-                handler = await fal_client.submit_async(
-                    "fal-ai/flux/dev",
-                    arguments={
-                        "prompt": f"A person wearing {product['name']} in a showroom setting, professional photography"
-                    }
-                )
-                result = await handler.get()
-                
-                if result and result.get('images'):
-                    results.append({
-                        'product_id': product['id'],
-                        'product_name': product['name'],
-                        'result_image': result['images'][0]['url']
-                    })
-            else:
-                # Mock AI visualization for demo
+            # Try Nano Banana first
+            result_image = await nano_banana_visualization(product['name'], user_photo_base64, industry)
+            
+            if not result_image:
+                # Fallback to mock
                 result_image = await mock_ai_visualization(product['name'], industry)
-                results.append({
-                    'product_id': product['id'],
-                    'product_name': product['name'],
-                    'result_image': result_image
-                })
+            
+            results.append({
+                'product_id': product['id'],
+                'product_name': product['name'],
+                'result_image': result_image
+            })
         except Exception as e:
             logging.error(f"Visualization error: {str(e)}")
-            # Fallback to mock on error
             result_image = await mock_ai_visualization(product['name'], industry)
             results.append({
                 'product_id': product['id'],
