@@ -813,26 +813,53 @@ export default function Kiosk() {
                     data-testid={`result-${index}`} 
                     className="bg-white rounded-3xl border border-slate-100 shadow-xl p-6"
                   >
-                    <h3 className="text-2xl font-semibold mb-6">{result.product_name}</h3>
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-2xl font-semibold">{result.product_name}</h3>
+                      {result.status === 'success' && (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                          AI Generated
+                        </span>
+                      )}
+                      {result.status === 'failed' && (
+                        <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                          Preview Only
+                        </span>
+                      )}
+                    </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <p className="text-sm text-slate-500 mb-3 font-medium">Original Photo</p>
-                        <div className="rounded-2xl overflow-hidden bg-slate-50">
-                          <img src={photoUrl} alt="Original" className="w-full object-contain" />
+                        <p className="text-sm text-slate-500 mb-3 font-medium">Your Photo</p>
+                        <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[3/4]">
+                          <img src={photoUrl} alt="Original" className="w-full h-full object-cover" />
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-slate-500 mb-3 font-medium">Product</p>
-                        <div className="rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center aspect-square">
-                          {result.product_image ? (
-                            <img src={result.product_image} alt="Product" className="max-w-full max-h-full object-contain p-4" />
+                        <p className="text-sm text-slate-500 mb-3 font-medium">
+                          {result.result_image ? 'AI Visualization' : 'Product Preview'}
+                        </p>
+                        <div className="rounded-2xl overflow-hidden bg-slate-50 aspect-[3/4] flex items-center justify-center">
+                          {result.result_image ? (
+                            <img 
+                              src={result.result_image} 
+                              alt="AI Result" 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : result.product_image ? (
+                            <img 
+                              src={result.product_image} 
+                              alt="Product" 
+                              className="max-w-full max-h-full object-contain p-4" 
+                            />
                           ) : (
                             <div className="text-center p-8">
                               <Sparkles className="w-16 h-16 text-violet-300 mx-auto mb-4" />
-                              <p className="text-slate-500">AI Visualization Coming Soon</p>
+                              <p className="text-slate-500">Processing...</p>
                             </div>
                           )}
                         </div>
+                        {result.error && (
+                          <p className="text-sm text-amber-600 mt-2 text-center">{result.error}</p>
+                        )}
                       </div>
                     </div>
                   </div>
