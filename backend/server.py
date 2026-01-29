@@ -1,557 +1,199 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, File, UploadFile
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel
 from typing import List, Optional
-import uuid
-from datetime import datetime, timezone, timedelta
-import bcrypt
-import jwt
-import fal_client
-import asyncio
+import os
 import base64
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+import asyncio
+import httpx
+from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+app = FastAPI(title="RetailVision AI API")
 
-app = FastAPI()
-api_router = APIRouter(prefix="/api")
-security = HTTPBearer()
-
-JWT_SECRET = os.environ.get('JWT_SECRET', 'retail-vision-secret-key-change-in-production')
-JWT_ALGORITHM = 'HS256'
-
-class UserSignup(BaseModel):
-    email: str
-    password: str
-    role: str  # 'founder' or 'owner'
-    shop_name: Optional[str] = None
-    industry: Optional[str] = None  # 'fashion' or 'tiles'
-    admin_pin: Optional[str] = '1234'
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
-class InventoryItem(BaseModel):
-    name: str
-    image: str
-    category: str
-    price: float
-    tags: List[str]
-    stock: int
-
-class InventoryUpdate(BaseModel):
-    name: Optional[str] = None
-    image: Optional[str] = None
-    category: Optional[str] = None
-    price: Optional[float] = None
-    tags: Optional[List[str]] = None
-    stock: Optional[int] = None
-
-class LeadCreate(BaseModel):
-    name: str
-    whatsapp: str
-    photo_url: str
-
-class VisualizationRequest(BaseModel):
-    lead_id: str
-    product_ids: List[str]
-    photo_url: str
-
-class KioskPinVerify(BaseModel):
-    pin: str
-
-def create_token(user_id: str, role: str, tenant_id: Optional[str]):
-    payload = {
-        'user_id': user_id,
-        'role': role,
-        'tenant_id': tenant_id,
-        'exp': datetime.now(timezone.utc) + timedelta(days=30)
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-@api_router.post("/auth/signup")
-async def signup(user: UserSignup):
-    existing = await db.users.find_one({'email': user.email}, {'_id': 0})
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already exists")
-    
-    hashed_password = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode()
-    user_id = str(uuid.uuid4())
-    tenant_id = None
-    
-    if user.role == 'owner':
-        tenant_id = str(uuid.uuid4())
-        tenant_doc = {
-            'id': tenant_id,
-            'shop_name': user.shop_name,
-            'industry': user.industry,
-            'owner_id': user_id,
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }
-        await db.tenants.insert_one(tenant_doc)
-    
-    user_doc = {
-        'id': user_id,
-        'email': user.email,
-        'password': hashed_password,
-        'role': user.role,
-        'tenant_id': tenant_id,
-        'admin_pin': user.admin_pin if user.role == 'owner' else None,
-        'created_at': datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.users.insert_one(user_doc)
-    
-    token = create_token(user_id, user.role, tenant_id)
-    return {'token': token, 'role': user.role, 'tenant_id': tenant_id, 'industry': user.industry}
-
-@api_router.post("/auth/login")
-async def login(user: UserLogin):
-    user_doc = await db.users.find_one({'email': user.email}, {'_id': 0})
-    if not user_doc:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    if not bcrypt.checkpw(user.password.encode(), user_doc['password'].encode()):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    tenant_doc = None
-    industry = None
-    if user_doc.get('tenant_id'):
-        tenant_doc = await db.tenants.find_one({'id': user_doc['tenant_id']}, {'_id': 0})
-        if tenant_doc:
-            industry = tenant_doc.get('industry')
-    
-    token = create_token(user_doc['id'], user_doc['role'], user_doc.get('tenant_id'))
-    return {'token': token, 'role': user_doc['role'], 'tenant_id': user_doc.get('tenant_id'), 'industry': industry}
-
-@api_router.post("/kiosk/verify-pin")
-async def verify_kiosk_pin(data: KioskPinVerify, current_user = Depends(get_current_user)):
-    if current_user['role'] != 'owner':
-        raise HTTPException(status_code=403, detail="Only owners can verify PIN")
-    
-    user_doc = await db.users.find_one({'id': current_user['user_id']}, {'_id': 0})
-    if not user_doc:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if user_doc.get('admin_pin') == data.pin:
-        return {'success': True}
-    else:
-        raise HTTPException(status_code=401, detail="Invalid PIN")
-
-@api_router.get("/tenants")
-async def get_tenants(current_user = Depends(get_current_user)):
-    if current_user['role'] != 'founder':
-        raise HTTPException(status_code=403, detail="Only founders can access this")
-    
-    tenants = await db.tenants.find({}, {'_id': 0}).to_list(1000)
-    return tenants
-
-@api_router.post("/upload-image")
-async def upload_image(file: UploadFile = File(...), current_user = Depends(get_current_user)):
-    """Upload image and return base64 data URL for storage"""
-    try:
-        contents = await file.read()
-        base64_data = base64.b64encode(contents).decode('utf-8')
-        mime_type = file.content_type or 'image/jpeg'
-        data_url = f"data:{mime_type};base64,{base64_data}"
-        return {'image_url': data_url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-
-@api_router.get("/inventory")
-async def get_inventory(current_user = Depends(get_current_user), kiosk: bool = False):
-    tenant_id = current_user.get('tenant_id')
-    if not tenant_id:
-        raise HTTPException(status_code=403, detail="No tenant associated")
-    
-    query = {'tenant_id': tenant_id}
-    if kiosk:
-        query['stock'] = {'$gt': 0}
-    
-    items = await db.inventory.find(query, {'_id': 0}).to_list(1000)
-    return items
-
-@api_router.post("/inventory")
-async def create_inventory(item: InventoryItem, current_user = Depends(get_current_user)):
-    if current_user['role'] != 'owner':
-        raise HTTPException(status_code=403, detail="Only owners can create inventory")
-    
-    tenant_id = current_user.get('tenant_id')
-    if not tenant_id:
-        raise HTTPException(status_code=403, detail="No tenant associated")
-    
-    item_doc = {
-        'id': str(uuid.uuid4()),
-        'tenant_id': tenant_id,
-        **item.model_dump(),
-        'created_at': datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.inventory.insert_one(item_doc)
-    return {'id': item_doc['id'], 'message': 'Item created successfully'}
-
-@api_router.put("/inventory/{item_id}")
-async def update_inventory(item_id: str, item: InventoryUpdate, current_user = Depends(get_current_user)):
-    if current_user['role'] != 'owner':
-        raise HTTPException(status_code=403, detail="Only owners can update inventory")
-    
-    tenant_id = current_user.get('tenant_id')
-    update_data = {k: v for k, v in item.model_dump().items() if v is not None}
-    
-    result = await db.inventory.update_one(
-        {'id': item_id, 'tenant_id': tenant_id},
-        {'$set': update_data}
-    )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Item not found")
-    
-    return {'message': 'Item updated successfully'}
-
-@api_router.delete("/inventory/{item_id}")
-async def delete_inventory(item_id: str, current_user = Depends(get_current_user)):
-    if current_user['role'] != 'owner':
-        raise HTTPException(status_code=403, detail="Only owners can delete inventory")
-    
-    tenant_id = current_user.get('tenant_id')
-    result = await db.inventory.delete_one({'id': item_id, 'tenant_id': tenant_id})
-    
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Item not found")
-    
-    return {'message': 'Item deleted successfully'}
-
-@api_router.post("/leads")
-async def create_lead(lead: LeadCreate, current_user = Depends(get_current_user)):
-    tenant_id = current_user.get('tenant_id')
-    if not tenant_id:
-        raise HTTPException(status_code=403, detail="No tenant associated")
-    
-    lead_doc = {
-        'id': str(uuid.uuid4()),
-        'tenant_id': tenant_id,
-        **lead.model_dump(),
-        'created_at': datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.leads.insert_one(lead_doc)
-    return {'id': lead_doc['id'], 'message': 'Lead captured successfully'}
-
-@api_router.get("/leads")
-async def get_leads(current_user = Depends(get_current_user)):
-    tenant_id = current_user.get('tenant_id')
-    if not tenant_id:
-        raise HTTPException(status_code=403, detail="No tenant associated")
-    
-    leads = await db.leads.find({'tenant_id': tenant_id}, {'_id': 0}).sort('created_at', -1).to_list(1000)
-    return leads
-
-async def nano_banana_visualization(product_name: str, product_category: str, user_photo_base64: str, industry: str):
-    """
-    Use Gemini Nano Banana for AI visualization - Virtual Try-On
-    Keeps user's face and body type, only changes clothing/tiles
-    """
-    try:
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
-        if not api_key:
-            raise Exception("EMERGENT_LLM_KEY not configured")
-        
-        chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()), system_message="You are an expert AI image editor specializing in virtual try-on and product visualization")
-        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
-        
-        if industry == 'fashion':
-            prompt = f"""Edit this photo to show the person wearing {product_name} ({product_category}).
-
-CRITICAL REQUIREMENTS:
-- Keep the person's FACE exactly the same - do not change facial features, skin tone, or expression
-- Keep the person's BODY TYPE and POSTURE exactly the same
-- Only change their CLOTHING to show them wearing the {product_name}
-- Make it look natural and realistic, as if they are actually wearing this outfit
-- Maintain the original lighting, background, and photo quality
-- The clothing should fit naturally on their body
-- Keep the same photography angle and composition
-
-Result should look like a professional showroom try-on photo where only the outfit has changed."""
-        else:  # tiles
-            prompt = f"""Edit this photo to show {product_name} ({product_category}) installed in this space.
-
-CRITICAL REQUIREMENTS:
-- Keep the ROOM/SPACE layout exactly the same
-- Keep the LIGHTING and SHADOWS exactly the same
-- Only add/replace the flooring or wall tiles with {product_name}
-- Make it look realistic as if these tiles are actually installed
-- Maintain proper perspective and alignment with the existing space
-- The tiles should follow the contours and angles of the surface
-- Keep all furniture, fixtures, and other elements unchanged
-
-Result should look like a professional architectural visualization of the space with new tiles."""
-        
-        msg = UserMessage(
-            text=prompt,
-            file_contents=[ImageContent(user_photo_base64)]
-        )
-        
-        text, images = await chat.send_message_multimodal_response(msg)
-        
-        if images and len(images) > 0:
-            image_data = images[0]['data']
-            mime_type = images[0].get('mime_type', 'image/png')
-            return f"data:{mime_type};base64,{image_data}"
-        
-        return None
-    except Exception as e:
-        logging.error(f"Nano Banana error: {str(e)}")
-        return None
-
-async def mock_ai_visualization(product_name: str, industry: str):
-    """
-    Mock AI visualization for demo purposes.
-    Replace this with actual RunPod GPU integration later.
-    """
-    await asyncio.sleep(2)
-    
-    # Demo images based on industry
-    demo_images = {
-        'fashion': [
-            'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1583391733981-5aff4229ecdf?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?auto=format&fit=crop&w=800&q=80'
-        ],
-        'tiles': [
-            'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=800&q=80'
-        ]
-    }
-    
-    import random
-    images = demo_images.get(industry, demo_images['fashion'])
-    return random.choice(images)
-
-@api_router.post("/visualize")
-async def create_visualization(viz: VisualizationRequest, current_user = Depends(get_current_user)):
-    tenant_id = current_user.get('tenant_id')
-    if not tenant_id:
-        raise HTTPException(status_code=403, detail="No tenant associated")
-    
-    tenant_doc = await db.tenants.find_one({'id': tenant_id}, {'_id': 0})
-    industry = tenant_doc.get('industry', 'fashion') if tenant_doc else 'fashion'
-    
-    products = await db.inventory.find(
-        {'id': {'$in': viz.product_ids}, 'tenant_id': tenant_id},
-        {'_id': 0}
-    ).to_list(100)
-    
-    results = []
-    
-    # Extract base64 from data URL if present
-    user_photo_base64 = viz.photo_url
-    if viz.photo_url and viz.photo_url.startswith('data:'):
-        user_photo_base64 = viz.photo_url.split(',')[1]
-    
-    for product in products:
-        try:
-            # Try Nano Banana first with detailed product info
-            result_image = await nano_banana_visualization(
-                product['name'], 
-                product.get('category', 'Item'),
-                user_photo_base64, 
-                industry
-            )
-            
-            if not result_image:
-                # Fallback to mock
-                result_image = await mock_ai_visualization(product['name'], industry)
-            
-            results.append({
-                'product_id': product['id'],
-                'product_name': product['name'],
-                'product_category': product.get('category', ''),
-                'result_image': result_image
-            })
-        except Exception as e:
-            logging.error(f"Visualization error: {str(e)}")
-            result_image = await mock_ai_visualization(product['name'], industry)
-            results.append({
-                'product_id': product['id'],
-                'product_name': product['name'],
-                'product_category': product.get('category', ''),
-                'result_image': result_image
-            })
-    
-    viz_doc = {
-        'id': str(uuid.uuid4()),
-        'tenant_id': tenant_id,
-        'lead_id': viz.lead_id,
-        'product_ids': viz.product_ids,
-        'results': results,
-        'created_at': datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.visualizations.insert_one(viz_doc)
-    
-    return {'id': viz_doc['id'], 'results': results}
-
-@api_router.delete("/admin/delete-user/{email}")
-async def delete_user_by_email(email: str):
-    """Delete a user and their associated data by email"""
-    try:
-        # Find user first
-        user = await db.users.find_one({'email': email}, {'_id': 0})
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        tenant_id = user.get('tenant_id')
-        
-        # Delete user
-        await db.users.delete_one({'email': email})
-        
-        # If user was an owner, delete their tenant and all associated data
-        if tenant_id:
-            await db.tenants.delete_one({'id': tenant_id})
-            await db.inventory.delete_many({'tenant_id': tenant_id})
-            await db.leads.delete_many({'tenant_id': tenant_id})
-            await db.visualizations.delete_many({'tenant_id': tenant_id})
-        
-        return {'message': f'User {email} and all associated data deleted successfully'}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/analytics")
-async def get_analytics(current_user = Depends(get_current_user)):
-    tenant_id = current_user.get('tenant_id')
-    if not tenant_id:
-        raise HTTPException(status_code=403, detail="No tenant associated")
-    
-    # Basic counts
-    total_visualizations = await db.visualizations.count_documents({'tenant_id': tenant_id})
-    total_leads = await db.leads.count_documents({'tenant_id': tenant_id})
-    total_products = await db.inventory.count_documents({'tenant_id': tenant_id})
-    
-    # Visualizations data
-    visualizations = await db.visualizations.find({'tenant_id': tenant_id}, {'_id': 0}).to_list(1000)
-    
-    # Product visualization count
-    product_count = {}
-    for viz in visualizations:
-        for prod_id in viz.get('product_ids', []):
-            product_count[prod_id] = product_count.get(prod_id, 0) + 1
-    
-    # Top products
-    top_products = sorted(product_count.items(), key=lambda x: x[1], reverse=True)[:5]
-    top_products_details = []
-    for prod_id, count in top_products:
-        product = await db.inventory.find_one({'id': prod_id, 'tenant_id': tenant_id}, {'_id': 0})
-        if product:
-            top_products_details.append({
-                'product': product,
-                'visualization_count': count
-            })
-    
-    # Time-based analytics (last 7 days)
-    from datetime import timedelta
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    daily_visualizations = {}
-    daily_leads = {}
-    
-    for viz in visualizations:
-        created_at = datetime.fromisoformat(viz['created_at'])
-        if created_at >= seven_days_ago:
-            date_key = created_at.strftime('%Y-%m-%d')
-            daily_visualizations[date_key] = daily_visualizations.get(date_key, 0) + 1
-    
-    leads = await db.leads.find({'tenant_id': tenant_id}, {'_id': 0}).to_list(1000)
-    for lead in leads:
-        created_at = datetime.fromisoformat(lead['created_at'])
-        if created_at >= seven_days_ago:
-            date_key = created_at.strftime('%Y-%m-%d')
-            daily_leads[date_key] = daily_leads.get(date_key, 0) + 1
-    
-    # Low stock alerts
-    low_stock_items = await db.inventory.find(
-        {'tenant_id': tenant_id, 'stock': {'$lte': 5, '$gt': 0}},
-        {'_id': 0}
-    ).sort('stock', 1).to_list(10)
-    
-    # Out of stock items
-    out_of_stock = await db.inventory.count_documents({'tenant_id': tenant_id, 'stock': 0})
-    
-    # Conversion rate (leads that resulted in visualizations)
-    leads_with_viz = len(set([viz.get('lead_id') for viz in visualizations]))
-    conversion_rate = (leads_with_viz / total_leads * 100) if total_leads > 0 else 0
-    
-    # Peak hours analysis
-    hour_distribution = {}
-    for viz in visualizations:
-        created_at = datetime.fromisoformat(viz['created_at'])
-        hour = created_at.hour
-        hour_distribution[hour] = hour_distribution.get(hour, 0) + 1
-    
-    peak_hours = sorted(hour_distribution.items(), key=lambda x: x[1], reverse=True)[:3]
-    
-    # Category performance
-    category_stats = {}
-    products = await db.inventory.find({'tenant_id': tenant_id}, {'_id': 0}).to_list(1000)
-    for product in products:
-        category = product.get('category', 'Uncategorized')
-        if category not in category_stats:
-            category_stats[category] = {'total_items': 0, 'total_stock': 0, 'visualizations': 0}
-        category_stats[category]['total_items'] += 1
-        category_stats[category]['total_stock'] += product.get('stock', 0)
-        category_stats[category]['visualizations'] += product_count.get(product['id'], 0)
-    
-    return {
-        'total_visualizations': total_visualizations,
-        'total_leads': total_leads,
-        'total_products': total_products,
-        'most_visualized': top_products_details,
-        'daily_visualizations': daily_visualizations,
-        'daily_leads': daily_leads,
-        'low_stock_items': low_stock_items,
-        'out_of_stock_count': out_of_stock,
-        'conversion_rate': round(conversion_rate, 2),
-        'peak_hours': peak_hours,
-        'category_performance': category_stats
-    }
-
-app.include_router(api_router)
-
+# CORS
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+api_router = APIRouter(prefix="/api")
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+# ============ Models ============
+
+class VisualizationRequest(BaseModel):
+    customer_photo_url: str
+    product_image_urls: List[str]
+    product_names: List[str]
+    industry: str  # 'fashion' or 'tiles'
+
+class VisualizationResult(BaseModel):
+    product_name: str
+    result_image: Optional[str] = None
+    status: str  # 'success', 'failed', 'pending'
+    error: Optional[str] = None
+
+class VisualizationResponse(BaseModel):
+    results: List[VisualizationResult]
+
+# ============ AI Service ============
+
+async def download_image_as_base64(url: str) -> str:
+    """Download image from URL and convert to base64"""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, timeout=30.0)
+        response.raise_for_status()
+        return base64.b64encode(response.content).decode('utf-8')
+
+async def generate_visualization(
+    customer_photo_base64: str,
+    product_image_base64: str,
+    product_name: str,
+    industry: str
+) -> VisualizationResult:
+    """Generate AI visualization using Nano Banana"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+        
+        api_key = os.getenv("EMERGENT_LLM_KEY")
+        if not api_key:
+            return VisualizationResult(
+                product_name=product_name,
+                status="failed",
+                error="API key not configured"
+            )
+        
+        # Create unique session
+        session_id = f"viz-{os.urandom(8).hex()}"
+        
+        # Build the prompt based on industry
+        if industry == 'fashion':
+            prompt = f"""You are an expert fashion AI stylist. 
+            
+I'm providing two images:
+1. First image: A customer's photo showing their face and body
+2. Second image: A clothing item called "{product_name}"
+
+Your task: Create a realistic visualization showing the customer WEARING the clothing item from the second image. 
+
+CRITICAL REQUIREMENTS:
+- Keep the customer's face, hairstyle, and body type EXACTLY the same
+- The clothing should fit naturally on their body
+- Maintain realistic lighting and shadows
+- The result should look like a professional fashion photo
+- Only replace/add the clothing, keep everything else about the person identical
+
+Generate the visualization image now."""
+        else:
+            prompt = f"""You are an expert interior design AI.
+            
+I'm providing two images:
+1. First image: A room or space photo
+2. Second image: A tile design called "{product_name}"
+
+Your task: Create a realistic visualization showing the tile from the second image applied to the floor or wall in the room from the first image.
+
+CRITICAL REQUIREMENTS:
+- Keep the room layout, furniture, and lighting the same
+- Apply the tile pattern realistically with proper perspective
+- Maintain proper scale and proportions
+- The result should look like a professional interior design render
+
+Generate the visualization image now."""
+
+        chat = LlmChat(
+            api_key=api_key, 
+            session_id=session_id, 
+            system_message="You are an AI visualization expert that creates realistic product try-on images."
+        )
+        chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
+        
+        # Create message with both images
+        msg = UserMessage(
+            text=prompt,
+            file_contents=[
+                ImageContent(customer_photo_base64),
+                ImageContent(product_image_base64)
+            ]
+        )
+        
+        # Generate visualization
+        text_response, images = await chat.send_message_multimodal_response(msg)
+        
+        if images and len(images) > 0:
+            # Return the first generated image as base64 data URL
+            img = images[0]
+            result_image = f"data:{img.get('mime_type', 'image/png')};base64,{img['data']}"
+            return VisualizationResult(
+                product_name=product_name,
+                result_image=result_image,
+                status="success"
+            )
+        else:
+            return VisualizationResult(
+                product_name=product_name,
+                status="failed",
+                error="No image generated"
+            )
+            
+    except Exception as e:
+        return VisualizationResult(
+            product_name=product_name,
+            status="failed",
+            error=str(e)
+        )
+
+# ============ Endpoints ============
+
+@api_router.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "RetailVision AI"}
+
+@api_router.post("/visualize", response_model=VisualizationResponse)
+async def create_visualization(request: VisualizationRequest):
+    """Generate AI visualizations for products"""
+    
+    try:
+        # Download customer photo
+        customer_photo_base64 = await download_image_as_base64(request.customer_photo_url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to download customer photo: {str(e)}")
+    
+    results = []
+    
+    # Process each product
+    for i, (product_url, product_name) in enumerate(zip(request.product_image_urls, request.product_names)):
+        try:
+            # Download product image
+            product_base64 = await download_image_as_base64(product_url)
+            
+            # Generate visualization
+            result = await generate_visualization(
+                customer_photo_base64=customer_photo_base64,
+                product_image_base64=product_base64,
+                product_name=product_name,
+                industry=request.industry
+            )
+            results.append(result)
+            
+        except Exception as e:
+            results.append(VisualizationResult(
+                product_name=product_name,
+                status="failed",
+                error=str(e)
+            ))
+    
+    return VisualizationResponse(results=results)
+
+# Include router
+app.include_router(api_router)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
