@@ -1,25 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
+import { useAuthStore } from './store/authStore';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import OwnerDashboard from './pages/OwnerDashboard';
-import KioskMode from './pages/KioskMode';
+import Dashboard from './pages/Dashboard';
+import Kiosk from './pages/Kiosk';
 
-const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
+const queryClient = new QueryClient();
 
-  if (!token) {
-    return <Navigate to="/login" />;
+function PrivateRoute({ children }) {
+  const { user, loading } = useAuthStore();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
-
-  return children;
-};
+  
+  return user ? children : <Navigate to="/login" />;
+}
 
 function App() {
+  const initialize = useAuthStore((state) => state.initialize);
+  
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+  
   return (
-    <div className="App">
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -29,7 +43,7 @@ function App() {
             path="/dashboard"
             element={
               <PrivateRoute>
-                <OwnerDashboard />
+                <Dashboard />
               </PrivateRoute>
             }
           />
@@ -37,14 +51,14 @@ function App() {
             path="/kiosk"
             element={
               <PrivateRoute>
-                <KioskMode />
+                <Kiosk />
               </PrivateRoute>
             }
           />
         </Routes>
       </BrowserRouter>
-      <Toaster />
-    </div>
+      <Toaster position="top-right" />
+    </QueryClientProvider>
   );
 }
 
