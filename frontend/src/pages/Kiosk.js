@@ -240,8 +240,11 @@ export default function Kiosk() {
     setStep('visualize');
 
     try {
-      // Call backend AI visualization API
+      // Call backend AI visualization API with both images
       const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+      
+      toast.info('Sending images to AI...');
+      
       const response = await fetch(`${BACKEND_URL}/api/visualize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,43 +256,53 @@ export default function Kiosk() {
         })
       });
 
-      let aiResult = null;
-      let resultImageUrl = null;
-      
-      if (response.ok) {
-        const data = await response.json();
-        aiResult = data.results?.[0] || null;
-        
-        // If AI generated an image, upload it to Supabase storage
-        if (aiResult?.result_image && aiResult.status === 'success') {
-          try {
-            const { uploadBase64Image } = await import('../lib/supabase');
-            resultImageUrl = await uploadBase64Image(aiResult.result_image, 'customer-uploads');
-          } catch (uploadError) {
-            console.error('Failed to upload result image:', uploadError);
-            // Still use the base64 image if upload fails
-            resultImageUrl = aiResult.result_image;
-          }
-        }
+      if (!response.ok) {
+        throw new Error('Visualization API request failed');
       }
 
-      // Save visualization record with correct column names
+      const data = await response.json();
+      const aiResult = data.results?.[0];
+
+      let visualizedImageUrl = null;
+
+      // If AI successfully generated an image, save it to visualized_uploads bucket
+      if (aiResult?.result_image && aiResult.status === 'success') {
+        toast.info('Saving AI result...');
+        
+        try {
+          const { uploadBase64Image } = await import('../lib/supabase');
+          // Save the AI-generated visualization to the new visualized_uploads bucket
+          visualizedImageUrl = await uploadBase64Image(aiResult.result_image, 'visualized_uploads');
+          toast.success('Visualization created successfully!');
+        } catch (uploadError) {
+          console.error('Failed to upload visualization result:', uploadError);
+          toast.error('Failed to save visualization');
+          // Fallback to using the base64 image directly
+          visualizedImageUrl = aiResult.result_image;
+        }
+      } else {
+        toast.warning('AI generation failed, showing product preview');
+      }
+
+      // Save visualization record to database
       await supabase
         .from('visualizations')
         .insert([{
           shop_id: shop.id,
           lead_id: leadId,
           input_photo_url: customerPhotoUrl,
-          result_photo_url: resultImageUrl || null,
+          result_photo_url: visualizedImageUrl,
           items_compared: [selectedProduct.id]
         }]);
 
       setResult({
         product: selectedProduct,
-        ai_image: resultImageUrl || aiResult?.result_image || null,
+        customer_photo: customerPhotoUrl,
+        ai_image: visualizedImageUrl,
         status: aiResult?.status || 'failed',
         error: aiResult?.error || null
       });
+      
       setStep('results');
     } catch (error) {
       console.error('Visualization error:', error);
