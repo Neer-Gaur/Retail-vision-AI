@@ -240,11 +240,25 @@ export default function Kiosk() {
     setStep('visualize');
 
     try {
-      // Call backend AI visualization API with both images
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+      // Immediately show the result screen with customer photo
+      // AI image will load after processing
+      const initialResult = {
+        product: selectedProduct,
+        customer_photo: customerPhotoUrl,
+        ai_image: null, // Will be set after AI processing
+        status: 'processing',
+        error: null
+      };
       
+      // Set initial result and move to results screen
+      setResult(initialResult);
+      setVisualizing(false);
+      setStep('results');
+
+      // Now process AI in background
       toast.info('Sending images to AI...');
       
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
       const response = await fetch(`${BACKEND_URL}/api/visualize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -298,6 +312,7 @@ export default function Kiosk() {
           items_compared: [selectedProduct.id]
         }]);
 
+      // Update result with AI image
       setResult({
         product: selectedProduct,
         customer_photo: customerPhotoUrl,
@@ -306,11 +321,18 @@ export default function Kiosk() {
         error: aiResult?.error || null
       });
       
-      setStep('results');
     } catch (error) {
       console.error('Visualization error:', error);
       toast.error('Visualization failed. Please try again.');
-      setStep('gallery');
+      // Still show result screen with just customer photo
+      setResult({
+        product: selectedProduct,
+        customer_photo: customerPhotoUrl,
+        ai_image: null,
+        status: 'failed',
+        error: error.message
+      });
+      setStep('results');
     } finally {
       setVisualizing(false);
     }
