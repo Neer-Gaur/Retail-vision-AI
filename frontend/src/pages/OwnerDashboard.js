@@ -479,11 +479,11 @@ export default function OwnerDashboard() {
                     whileHover={{ y: -4 }}
                     className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-floating transition-all"
                   >
-                    <div className="h-48 overflow-hidden bg-slate-100">
+                    <div className="h-48 overflow-hidden bg-slate-100 flex items-center justify-center">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     <div className="p-4">
