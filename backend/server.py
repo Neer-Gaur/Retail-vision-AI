@@ -113,7 +113,7 @@ Generate the visualization image now."""
         chat = LlmChat(
             api_key=api_key, 
             session_id=session_id, 
-            system_message="You are an AI visualization expert that creates realistic product try-on images."
+            system_message="You are an expert fashion visualization AI that creates realistic product try-on images."
         )
         chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
         
