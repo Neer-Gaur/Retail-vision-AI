@@ -379,7 +379,7 @@ export default function OwnerDashboard() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input
-                      placeholder={`Search ${itemLabel}s...`}
+                      placeholder="Search items..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10 h-12 rounded-xl border-slate-200 bg-white"
@@ -397,12 +397,12 @@ export default function OwnerDashboard() {
                       }}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Add {itemLabel}
+                      Add Item
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="bg-white border-slate-200 max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold">{editingItem ? 'Edit' : 'Add'} {itemLabel}</DialogTitle>
+                      <DialogTitle className="text-2xl font-bold">{editingItem ? 'Edit' : 'Add'} Item</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmitItem} className="space-y-4">
                       <div>
@@ -410,7 +410,7 @@ export default function OwnerDashboard() {
                         <div className="mt-2">
                           {formData.image && (
                             <div className="mb-3 relative">
-                              <img src={formData.image} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-slate-200" />
+                              <img src={formData.image} alt="Preview" className="w-full h-48 object-contain rounded-xl border border-slate-200 bg-slate-50" />
                             </div>
                           )}
                           <Button
@@ -453,13 +453,19 @@ export default function OwnerDashboard() {
                         </div>
                         <div>
                           <Label>Category</Label>
-                          <Input
-                            data-testid="item-category-input"
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            required
-                            className="h-12 rounded-xl border-slate-200 bg-slate-50"
-                          />
+                          <Select 
+                            value={formData.category} 
+                            onValueChange={(value) => setFormData({ ...formData, category: value })}
+                          >
+                            <SelectTrigger data-testid="item-category-input" className="h-12 rounded-xl border-slate-200 bg-slate-50">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((cat) => (
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -499,7 +505,7 @@ export default function OwnerDashboard() {
                         />
                       </div>
                       <Button data-testid="submit-item-btn" type="submit" className="btn-primary w-full">
-                        {editingItem ? 'Update' : 'Add'} {itemLabel}
+                        {editingItem ? 'Update' : 'Add'} Item
                       </Button>
                     </form>
                   </DialogContent>
