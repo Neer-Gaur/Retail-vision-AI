@@ -538,7 +538,7 @@ export default function KioskMode() {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                       <Label className="text-sm font-medium mb-4 block">
-                        Price Range: ${priceRange[0]} - ${priceRange[1]}
+                        Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
                       </Label>
                       <Slider
                         min={0}
@@ -551,28 +551,53 @@ export default function KioskMode() {
                     </div>
                     
                     <div>
-                      <Label className="text-sm font-medium mb-4 block">Tags/Materials</Label>
+                      <Label className="text-sm font-medium mb-4 block">Categories</Label>
                       <div className="flex flex-wrap gap-2">
-                        {getAllTags().map(tag => (
+                        {getAllCategories().map(category => (
                           <button
-                            key={tag}
+                            key={category}
                             onClick={() => {
-                              if (selectedTags.includes(tag)) {
-                                setSelectedTags(selectedTags.filter(t => t !== tag));
+                              if (selectedCategories.includes(category)) {
+                                setSelectedCategories(selectedCategories.filter(c => c !== category));
                               } else {
-                                setSelectedTags([...selectedTags, tag]);
+                                setSelectedCategories([...selectedCategories, category]);
                               }
                             }}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                              selectedTags.includes(tag)
+                              selectedCategories.includes(category)
                                 ? 'bg-black text-white'
                                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                           >
-                            {tag}
+                            {category}
                           </button>
                         ))}
                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6">
+                    <Label className="text-sm font-medium mb-4 block">Tags/Materials</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {getAllTags().map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            if (selectedTags.includes(tag)) {
+                              setSelectedTags(selectedTags.filter(t => t !== tag));
+                            } else {
+                              setSelectedTags([...selectedTags, tag]);
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                            selectedTags.includes(tag)
+                              ? 'bg-black text-white'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </motion.div>
