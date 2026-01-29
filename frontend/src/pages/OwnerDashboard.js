@@ -180,6 +180,7 @@ export default function OwnerDashboard() {
   };
 
   const categories = industry === 'fashion' ? FASHION_CATEGORIES : TILES_CATEGORIES;
+  const itemLabel = industry === 'fashion' ? 'Product' : 'Tile';
 
   // Prepare chart data
   const dailyData = analytics ? Object.keys(analytics.daily_visualizations || {}).map(date => ({
