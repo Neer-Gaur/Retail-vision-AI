@@ -108,20 +108,15 @@ Retail-Vision AI is a multi-tenant SaaS platform for Saree and Tile showrooms, e
 
 ## Pending/Future Features
 
-### P0 - AI Visualization (Not Implemented)
-- **MOCKED**: Currently shows product images instead of AI-generated results
-- Requires: Nano Banana API integration via Supabase Edge Function
-- Prompt engineering to preserve user's face/body while applying products
-
 ### P1 - Enhanced Features
 - [ ] WhatsApp API integration for auto-messaging
 - [ ] Email notifications for leads
-- [ ] QR code for result images
+- [ ] Founder God-View Dashboard
 
 ### P2 - Polish
-- [ ] Founder God-View Dashboard
 - [ ] 43-inch vertical kiosk responsive optimization
 - [ ] Dark theme variant
+- [ ] RLS policies in Supabase for multi-tenant isolation
 
 ## File Structure
 ```
