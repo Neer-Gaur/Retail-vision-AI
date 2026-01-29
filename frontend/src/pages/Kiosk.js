@@ -317,14 +317,26 @@ export default function Kiosk() {
   };
 
   const handleRestart = () => {
-    setStep('lead');
-    setLeadData({ customer_name: '', whatsapp_number: '' });
-    setLeadId(null);
-    setCustomerPhotoUrl(null);
-    setPhotoBase64(null);
+    // Go back to gallery to select another product (keep customer photo and lead data)
+    setStep('gallery');
     setSelectedProduct(null);
     setResult(null);
-    resetFilters();
+  };
+
+  const handleExitSession = () => {
+    // Confirm exit
+    if (window.confirm('Exit kiosk session? This will clear all data.')) {
+      // Clear everything and return to lead capture
+      setStep('lead');
+      setLeadData({ customer_name: '', whatsapp_number: '' });
+      setLeadId(null);
+      setCustomerPhotoUrl(null);
+      setPhotoBase64(null);
+      setSelectedProduct(null);
+      setResult(null);
+      resetFilters();
+      toast.info('Session ended. Ready for new customer.');
+    }
   };
 
   const handleLogoMouseDown = () => {
