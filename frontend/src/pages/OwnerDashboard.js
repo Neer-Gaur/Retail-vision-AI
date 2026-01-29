@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { inventoryAPI, analyticsAPI, leadsAPI } from '@/services/api';
 import { toast } from 'sonner';
@@ -14,6 +15,39 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const COLORS = ['#0A0A0A', '#475569', '#64748B', '#94A3B8', '#CBD5E1'];
+
+const FASHION_CATEGORIES = [
+  'Saree',
+  'Suit',
+  'Lehenga',
+  'Kurti',
+  'Dress',
+  'Jeans',
+  'Top',
+  'Shirt',
+  'T-Shirt',
+  'Jacket',
+  'Ethnic Wear',
+  'Western Wear',
+  'Party Wear',
+  'Casual Wear',
+  'Other'
+];
+
+const TILES_CATEGORIES = [
+  'Floor Tiles',
+  'Wall Tiles',
+  'Bathroom Tiles',
+  'Kitchen Tiles',
+  'Outdoor Tiles',
+  'Ceramic Tiles',
+  'Porcelain Tiles',
+  'Marble Tiles',
+  'Granite Tiles',
+  'Mosaic Tiles',
+  'Vitrified Tiles',
+  'Other'
+];
 
 export default function OwnerDashboard() {
   const navigate = useNavigate();
