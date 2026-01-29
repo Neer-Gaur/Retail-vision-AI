@@ -21,7 +21,7 @@ const TRIAL_LIMIT = 3;
 
 export default function Inventory() {
   const navigate = useNavigate();
-  const { shop } = useAuthStore();
+  const { shop, refreshShop } = useAuthStore();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -39,10 +39,24 @@ export default function Inventory() {
   const isTrialLimitReached = shop?.subscription_status === 'trial' && inventory.length >= TRIAL_LIMIT;
 
   useEffect(() => {
-    if (shop?.id) loadInventory();
-  }, [shop?.id]);
+    const initializeInventory = async () => {
+      if (!shop) {
+        await refreshShop();
+      }
+      if (shop?.id) {
+        await loadInventory();
+      }
+    };
+    initializeInventory();
+  }, [shop?.id, refreshShop]);
 
   const loadInventory = async () => {
+    if (!shop?.id) {
+      console.log('No shop ID for inventory');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -50,9 +64,15 @@ export default function Inventory() {
         .select('*')
         .eq('shop_id', shop.id)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setInventory(data || []);
+      
+      if (error) {
+        console.error('Inventory load error:', error);
+        toast.error('Failed to load inventory: ' + error.message);
+      } else {
+        setInventory(data || []);
+      }
     } catch (error) {
+      console.error('Inventory exception:', error);
       toast.error('Failed to load inventory');
     } finally {
       setLoading(false);
