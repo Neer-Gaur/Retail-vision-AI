@@ -374,46 +374,46 @@ export default function Kiosk() {
             data-testid="lead-capture-step"
           >
             <div className="max-w-md w-full">
-              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-3xl blur-xl opacity-30" />
-              <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-slate-800 p-8">
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-400 to-purple-400 rounded-3xl blur-xl opacity-30" />
+              <div className="relative bg-white rounded-3xl border border-slate-200 p-8 shadow-xl">
                 <div className="text-center mb-8">
                   <motion.div
                     animate={{ y: [0, -10, 0] }}
                     transition={{ duration: 3, repeat: Infinity }}
-                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-500/30"
+                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-200"
                   >
                     <Sparkles className="w-8 h-8 text-white" />
                   </motion.div>
-                  <h1 className="text-3xl font-bold mb-2">
+                  <h1 className="text-3xl font-bold text-slate-900 mb-2">
                     Welcome to {shop?.shop_name}
                   </h1>
-                  <p className="text-slate-400">
+                  <p className="text-slate-500">
                     Enter your details to start
                   </p>
                 </div>
 
                 <form onSubmit={handleLeadSubmit} className="space-y-5">
                   <div>
-                    <Label className="text-slate-300 mb-2 block">Your Name</Label>
+                    <Label className="text-slate-700 mb-2 block">Your Name</Label>
                     <Input
                       data-testid="lead-name-input"
                       value={leadData.customer_name}
                       onChange={(e) => setLeadData({ ...leadData, customer_name: e.target.value })}
                       required
-                      className="h-14 rounded-xl bg-slate-800/50 border-slate-700 text-white text-lg"
+                      className="h-14 rounded-xl border-slate-200 text-lg"
                       placeholder="Enter your name"
                     />
                   </div>
 
                   <div>
-                    <Label className="text-slate-300 mb-2 block">WhatsApp Number</Label>
+                    <Label className="text-slate-700 mb-2 block">WhatsApp Number</Label>
                     <Input
                       data-testid="lead-whatsapp-input"
                       type="tel"
                       value={leadData.whatsapp_number}
                       onChange={(e) => setLeadData({ ...leadData, whatsapp_number: e.target.value })}
                       required
-                      className="h-14 rounded-xl bg-slate-800/50 border-slate-700 text-white text-lg"
+                      className="h-14 rounded-xl border-slate-200 text-lg"
                       placeholder="+91 98765 43210"
                     />
                   </div>
@@ -421,7 +421,7 @@ export default function Kiosk() {
                   <Button
                     data-testid="lead-submit-btn"
                     type="submit"
-                    className="w-full h-14 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-lg font-semibold"
+                    className="w-full h-14 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold shadow-lg shadow-violet-200"
                   >
                     Continue
                   </Button>
