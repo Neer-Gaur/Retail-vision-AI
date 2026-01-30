@@ -21,7 +21,7 @@ const TRIAL_LIMIT = 3;
 
 export default function Inventory() {
   const navigate = useNavigate();
-  const { shop } = useAuthStore();
+  const { shop, refreshShop } = useAuthStore();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -35,14 +35,32 @@ export default function Inventory() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
+  // Debug: log shop data
+  console.log('Shop data:', shop);
+  console.log('Industry:', shop?.industry);
+
   const categories = shop?.industry === 'fashion' ? FASHION_CATEGORIES : TILE_CATEGORIES;
   const isTrialLimitReached = shop?.subscription_status === 'trial' && inventory.length >= TRIAL_LIMIT;
 
   useEffect(() => {
-    if (shop?.id) loadInventory();
-  }, [shop?.id]);
+    const initializeInventory = async () => {
+      if (!shop) {
+        await refreshShop();
+      }
+      if (shop?.id) {
+        await loadInventory();
+      }
+    };
+    initializeInventory();
+  }, [shop?.id, refreshShop]);
 
   const loadInventory = async () => {
+    if (!shop?.id) {
+      console.log('No shop ID for inventory');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -50,9 +68,15 @@ export default function Inventory() {
         .select('*')
         .eq('shop_id', shop.id)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setInventory(data || []);
+      
+      if (error) {
+        console.error('Inventory load error:', error);
+        toast.error('Failed to load inventory: ' + error.message);
+      } else {
+        setInventory(data || []);
+      }
     } catch (error) {
+      console.error('Inventory exception:', error);
       toast.error('Failed to load inventory');
     } finally {
       setLoading(false);
@@ -257,7 +281,7 @@ export default function Inventory() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={(open) => { if (!open) resetForm(); setShowAddDialog(open); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">{editingItem ? 'Edit Product' : 'Add Product'}</DialogTitle>
           </DialogHeader>
@@ -282,11 +306,11 @@ export default function Inventory() {
               <Label className="text-sm font-medium mb-2 block">Name</Label>
               <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="h-12 rounded-xl" placeholder="Product name" />
             </div>
-            <div>
+            <div className="relative z-[300]">
               <Label className="text-sm font-medium mb-2 block">Category</Label>
               <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                 <SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent className="z-[300]">{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">

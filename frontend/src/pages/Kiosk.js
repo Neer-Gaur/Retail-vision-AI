@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, X, Check, Loader2, Share2, Upload, 
-  SlidersHorizontal, ArrowUpDown, Sparkles, Eye
+  SlidersHorizontal, ArrowUpDown, Sparkles, Eye, LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -230,6 +230,51 @@ export default function Kiosk() {
     }
   };
 
+  // Client-side image preview generator (fallback when AI is unavailable)
+  const generateClientSidePreview = async (customerPhotoUrl, productImageUrl) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const customerImg = new Image();
+      customerImg.crossOrigin = 'anonymous';
+      
+      customerImg.onload = () => {
+        // Set canvas size to customer image size
+        canvas.width = customerImg.width;
+        canvas.height = customerImg.height;
+        
+        // Draw customer photo as base
+        ctx.drawImage(customerImg, 0, 0);
+        
+        // Load and overlay product image
+        const productImg = new Image();
+        productImg.crossOrigin = 'anonymous';
+        
+        productImg.onload = () => {
+          // Calculate product overlay position (center-bottom, natural product size)
+          const productWidth = canvas.width * 0.5;
+          const productHeight = (productImg.height / productImg.width) * productWidth;
+          const x = (canvas.width - productWidth) / 2;
+          const y = canvas.height - productHeight - 20;
+          
+          // Apply semi-transparency for preview effect
+          ctx.globalAlpha = 0.8;
+          ctx.drawImage(productImg, x, y, productWidth, productHeight);
+          
+          // Convert to data URL - NO WATERMARK for clean look
+          resolve(canvas.toDataURL('image/jpeg', 0.95));
+        };
+        
+        productImg.onerror = () => reject(new Error('Failed to load product image'));
+        productImg.src = productImageUrl;
+      };
+      
+      customerImg.onerror = () => reject(new Error('Failed to load customer image'));
+      customerImg.src = customerPhotoUrl;
+    });
+  };
+
   const handleVisualize = async () => {
     if (!selectedProduct) {
       toast.error('Please select a product');
@@ -240,62 +285,137 @@ export default function Kiosk() {
     setStep('visualize');
 
     try {
-      // Call backend AI visualization API
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-      const response = await fetch(`${BACKEND_URL}/api/visualize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_photo_url: customerPhotoUrl,
-          product_image_urls: [selectedProduct.image_url],
-          product_names: [selectedProduct.name],
-          industry: shop?.industry || 'fashion'
-        })
-      });
-
-      let aiResult = null;
+      // Immediately show the result screen with customer photo
+      const initialResult = {
+        product: selectedProduct,
+        customer_photo: customerPhotoUrl,
+        ai_image: null,
+        status: 'processing',
+        error: null
+      };
       
-      if (response.ok) {
-        const data = await response.json();
-        aiResult = data.results?.[0] || null;
+      setResult(initialResult);
+      setVisualizing(false);
+      setStep('results');
+
+      // Try AI first, fallback to client-side preview
+      let visualizedImageUrl = null;
+      let usePreviewMode = false;
+
+      try {
+        toast.info('Sending images to AI...');
+        
+        const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+        const response = await fetch(`${BACKEND_URL}/api/visualize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_photo_url: customerPhotoUrl,
+            product_image_urls: [selectedProduct.image_url],
+            product_names: [selectedProduct.name],
+            industry: shop?.industry || 'fashion'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const aiResult = data.results?.[0];
+
+          if (aiResult?.result_image && aiResult.status === 'success') {
+            toast.info('Saving AI result...');
+            
+            try {
+              const { uploadBase64Image } = await import('../lib/supabase');
+              visualizedImageUrl = await uploadBase64Image(aiResult.result_image, 'visualized_uploads');
+              console.log('Visualization saved to:', visualizedImageUrl);
+              toast.success('AI Visualization created!');
+            } catch (uploadError) {
+              console.error('Failed to upload visualization result:', uploadError);
+              visualizedImageUrl = aiResult.result_image;
+            }
+          } else {
+            throw new Error(aiResult?.error || 'AI generation failed');
+          }
+        } else {
+          throw new Error('API request failed');
+        }
+      } catch (aiError) {
+        console.log('AI failed, using preview mode:', aiError.message);
+        toast.info('AI unavailable - Generating preview...');
+        
+        // Generate client-side preview
+        try {
+          const previewImage = await generateClientSidePreview(
+            customerPhotoUrl,
+            selectedProduct.image_url
+          );
+          visualizedImageUrl = previewImage;
+          usePreviewMode = true;
+          toast.success('Preview generated!');
+        } catch (previewError) {
+          console.error('Preview generation failed:', previewError);
+          toast.warning('Using product preview');
+        }
       }
 
-      // Save visualization record
+      // Save visualization record to database
       await supabase
         .from('visualizations')
         .insert([{
           shop_id: shop.id,
           lead_id: leadId,
-          customer_photo_url: customerPhotoUrl,
-          product_id: selectedProduct.id,
-          result_photo_url: aiResult?.result_image || null
+          input_photo_url: customerPhotoUrl,
+          result_photo_url: visualizedImageUrl,
+          items_compared: [selectedProduct.id]
         }]);
 
+      // Update result with visualization
       setResult({
         product: selectedProduct,
-        ai_image: aiResult?.result_image || null,
-        status: aiResult?.status || 'failed',
-        error: aiResult?.error || null
+        customer_photo: customerPhotoUrl,
+        ai_image: visualizedImageUrl,
+        status: visualizedImageUrl ? 'success' : 'failed',
+        error: null,
+        preview_mode: usePreviewMode
       });
-      setStep('results');
+      
     } catch (error) {
       console.error('Visualization error:', error);
       toast.error('Visualization failed. Please try again.');
-      setStep('gallery');
+      setResult({
+        product: selectedProduct,
+        customer_photo: customerPhotoUrl,
+        ai_image: null,
+        status: 'failed',
+        error: error.message
+      });
+      setStep('results');
     } finally {
       setVisualizing(false);
     }
   };
 
   const handleRestart = () => {
-    setStep('lead');
-    setLeadData({ customer_name: '', whatsapp_number: '' });
-    setLeadId(null);
-    setCustomerPhotoUrl(null);
-    setPhotoBase64(null);
+    // Go back to gallery to select another product (keep customer photo and lead data)
+    setStep('gallery');
     setSelectedProduct(null);
     setResult(null);
-    resetFilters();
+  };
+
+  const handleExitSession = () => {
+    // Confirm exit
+    if (window.confirm('Exit kiosk session? This will clear all data.')) {
+      // Clear everything and return to lead capture
+      setStep('lead');
+      setLeadData({ customer_name: '', whatsapp_number: '' });
+      setLeadId(null);
+      setCustomerPhotoUrl(null);
+      setPhotoBase64(null);
+      setSelectedProduct(null);
+      setResult(null);
+      resetFilters();
+      toast.info('Session ended. Ready for new customer.');
+    }
   };
 
   const handleLogoMouseDown = () => {
@@ -337,8 +457,8 @@ export default function Kiosk() {
   const overlayType = shop?.industry === 'fashion' ? 'silhouette' : 'grid';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 relative">
-      {/* Logo for Exit */}
+    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative">
+      {/* Logo for Exit (Admin) */}
       <motion.div
         ref={logoRef}
         onMouseDown={handleLogoMouseDown}
@@ -361,6 +481,19 @@ export default function Kiosk() {
           </div>
         )}
       </motion.div>
+
+      {/* Exit Session Button (Customer) - Show only after lead capture */}
+      {step !== 'lead' && (
+        <motion.button
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={handleExitSession}
+          className="absolute top-6 right-6 z-50 px-4 py-2 rounded-full bg-red-500/90 hover:bg-red-600 backdrop-blur-sm border border-red-400/30 flex items-center gap-2 shadow-lg transition-all"
+        >
+          <LogOut className="w-5 h-5 text-white" />
+          <span className="text-white font-semibold">Exit Session</span>
+        </motion.button>
+      )}
 
       <AnimatePresence mode="wait">
         {/* STEP 1: Lead Capture */}
@@ -400,7 +533,7 @@ export default function Kiosk() {
                       value={leadData.customer_name}
                       onChange={(e) => setLeadData({ ...leadData, customer_name: e.target.value })}
                       required
-                      className="h-14 rounded-xl border-slate-200 text-lg"
+                      className="h-14 rounded-xl border-slate-200 text-lg bg-white text-slate-900"
                       placeholder="Enter your name"
                     />
                   </div>
@@ -413,7 +546,7 @@ export default function Kiosk() {
                       value={leadData.whatsapp_number}
                       onChange={(e) => setLeadData({ ...leadData, whatsapp_number: e.target.value })}
                       required
-                      className="h-14 rounded-xl border-slate-200 text-lg"
+                      className="h-14 rounded-xl border-slate-200 text-lg bg-white text-slate-900"
                       placeholder="+91 98765 43210"
                     />
                   </div>
@@ -526,24 +659,24 @@ export default function Kiosk() {
             <div className="max-w-7xl mx-auto p-8 pt-20">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                  <h2 className="text-4xl font-bold">Select a Product</h2>
-                  <p className="text-slate-400 mt-2">Choose one item to visualize</p>
+                  <h2 className="text-4xl font-bold text-white">Select a Product</h2>
+                  <p className="text-slate-300 mt-2">Choose one item to visualize</p>
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="rounded-full h-12 px-6 border-slate-700 text-white">
+                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="rounded-full h-12 px-6 border-slate-600 bg-slate-800/50 text-white hover:bg-slate-700">
                     <SlidersHorizontal className="w-5 h-5 mr-2" /> Filters
                   </Button>
                   
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px] h-12 rounded-full border-slate-700 bg-transparent text-white">
+                    <SelectTrigger className="w-[180px] h-12 rounded-full border-slate-600 bg-slate-800/50 text-white hover:bg-slate-700">
                       <ArrowUpDown className="w-4 h-4 mr-2" />
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
-                      <SelectItem value="name">Name</SelectItem>
-                      <SelectItem value="price-low">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                      <SelectItem value="name" className="text-white hover:bg-slate-700">Name</SelectItem>
+                      <SelectItem value="price-low" className="text-white hover:bg-slate-700">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high" className="text-white hover:bg-slate-700">Price: High to Low</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -556,23 +689,23 @@ export default function Kiosk() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 mb-8 overflow-hidden"
+                    className="bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-8 overflow-hidden"
                   >
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold">Filters</h3>
-                      <Button onClick={resetFilters} variant="ghost" className="text-sm text-slate-400">Reset All</Button>
+                      <h3 className="text-xl font-semibold text-white">Filters</h3>
+                      <Button onClick={resetFilters} variant="ghost" className="text-sm text-slate-300 hover:text-white">Reset All</Button>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <Label className="text-sm text-slate-400 mb-4 block">
+                        <Label className="text-sm text-slate-300 mb-4 block">
                           Price: ₹{priceRange[0].toLocaleString('en-IN')} - ₹{priceRange[1].toLocaleString('en-IN')}
                         </Label>
                         <Slider min={0} max={maxPrice} step={100} value={priceRange} onValueChange={setPriceRange} />
                       </div>
                       
                       <div>
-                        <Label className="text-sm text-slate-400 mb-4 block">Categories</Label>
+                        <Label className="text-sm text-slate-300 mb-4 block">Categories</Label>
                         <div className="flex flex-wrap gap-2">
                           {getAllCategories().map(cat => (
                             <button
@@ -581,7 +714,7 @@ export default function Kiosk() {
                                 prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
                               )}
                               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                selectedCategories.includes(cat) ? 'bg-violet-600 text-white' : 'bg-slate-800 text-slate-300'
+                                selectedCategories.includes(cat) ? 'bg-violet-600 text-white' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                               }`}
                             >
                               {cat}
@@ -602,39 +735,32 @@ export default function Kiosk() {
                     onClick={() => setSelectedProduct(product)}
                     whileHover={{ y: -4 }}
                     whileTap={{ scale: 0.98 }}
-                    className={`relative cursor-pointer rounded-2xl overflow-hidden bg-slate-900/50 border-2 transition-all ${
+                    className={`relative cursor-pointer rounded-2xl overflow-hidden bg-slate-800/80 backdrop-blur-sm border-2 transition-all ${
                       selectedProduct?.id === product.id 
-                        ? 'border-violet-500 ring-4 ring-violet-500/20' 
-                        : 'border-slate-800 hover:border-slate-700'
+                        ? 'border-violet-500 ring-4 ring-violet-500/30 shadow-xl shadow-violet-500/20' 
+                        : 'border-slate-700 hover:border-slate-600 hover:shadow-lg'
                     }`}
                   >
-                    <div className="aspect-square bg-slate-800/50 flex items-center justify-center">
+                    <div className="aspect-square bg-white/5 flex items-center justify-center">
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain p-4" />
                       ) : (
-                        <Eye className="w-16 h-16 text-slate-700" />
+                        <Eye className="w-16 h-16 text-slate-600" />
                       )}
                     </div>
                     {selectedProduct?.id === product.id && (
-                      <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center">
+                      <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg">
                         <Check className="w-6 h-6 text-white" />
                       </div>
                     )}
-                    <div className="p-4">
-                      <h3 className="font-semibold truncate">{product.name}</h3>
-                      <p className="text-sm text-slate-400 mb-2">{product.category}</p>
+                    <div className="p-4 bg-slate-900/50">
+                      <h3 className="font-semibold text-white truncate">{product.name}</h3>
+                      <p className="text-sm text-slate-300 mb-2">{product.category}</p>
                       <p className="text-lg font-bold text-violet-400">₹{product.price?.toLocaleString('en-IN')}</p>
                     </div>
                   </motion.div>
                 ))}
               </div>
-
-              {filteredInventory.length === 0 && (
-                <div className="text-center py-20 text-slate-500">
-                  <Eye className="w-16 h-16 mx-auto mb-4 text-slate-700" />
-                  <p className="text-xl">No products available</p>
-                </div>
-              )}
 
               {/* Floating Action Button */}
               <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
@@ -666,13 +792,23 @@ export default function Kiosk() {
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 className="w-24 h-24 rounded-full border-4 border-violet-500/30 border-t-violet-500 mx-auto mb-8"
               />
-              <h2 className="text-4xl font-bold mb-4">Creating Your Visualization</h2>
-              <p className="text-slate-400 text-lg">AI is working its magic...</p>
+              <h2 className="text-4xl font-bold text-white mb-4">Creating Your Visualization</h2>
+              <p className="text-slate-300 text-lg">AI is working its magic...</p>
             </div>
           </motion.div>
         )}
 
-        {/* STEP 5: Results */}
+        {/* Empty State */}
+        {step === 'gallery' && filteredInventory.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center py-20 text-slate-400">
+              <Eye className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+              <p className="text-xl">No products available</p>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5: Results - Futuristic Mirror */}
         {step === 'results' && result && (
           <motion.div
             key="results"
@@ -681,63 +817,217 @@ export default function Kiosk() {
             exit={{ opacity: 0 }}
             className="h-full p-8 pt-20 overflow-y-auto hide-scrollbar"
           >
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold mb-2">Your Visualization</h2>
-                <p className="text-slate-400">See how {result.product.name} looks on you</p>
-              </div>
+            <div className="max-w-6xl mx-auto">
+              {/* Header */}
+              <motion.div 
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-center mb-8"
+              >
+                <h2 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-purple-400 mb-3">
+                  Your Virtual Try-On
+                </h2>
+                <p className="text-slate-300 text-lg">See yourself in {result.product.name}</p>
+              </motion.div>
 
-              <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-semibold">{result.product.name}</h3>
-                  {result.ai_image && (
-                    <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium">AI Generated</span>
-                  )}
-                </div>
-                
+              {/* Futuristic Mirror Display */}
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: "spring" }}
+                className="relative mb-8"
+              >
+                {/* Show both images side by side - SAME HEIGHT */}
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-3">Your Photo</p>
-                    <div className="rounded-2xl overflow-hidden bg-slate-800 aspect-[3/4]">
-                      <img src={customerPhotoUrl} alt="You" className="w-full h-full object-cover" />
+                  {/* Left: Original Customer Photo */}
+                  <div className="relative">
+                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-[2rem] blur-xl opacity-20" />
+                    <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2rem] p-4 border-2 border-blue-400/30 shadow-xl">
+                      <div className="text-center mb-3">
+                        <p className="text-blue-300 font-semibold text-sm">Original Photo</p>
+                      </div>
+                      <div className="relative bg-black/50 rounded-2xl overflow-hidden border border-blue-400/20">
+                        {/* Fixed aspect ratio for consistency */}
+                        <div className="aspect-[9/14]">
+                          <img 
+                            src={result.customer_photo} 
+                            alt="Your Photo" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-slate-400 mb-3">{result.ai_image ? 'AI Visualization' : 'Product'}</p>
-                    <div className="rounded-2xl overflow-hidden bg-slate-800 aspect-[3/4] flex items-center justify-center">
-                      {result.ai_image ? (
-                        <img src={result.ai_image} alt="Result" className="w-full h-full object-cover" />
-                      ) : (
-                        <img src={result.product.image_url} alt="Product" className="max-w-full max-h-full object-contain p-4" />
-                      )}
+
+                  {/* Right: AI Visualization Mirror - SAME HEIGHT */}
+                  <div className="relative">
+                    {/* Outer Glow Effect */}
+                    <div className="absolute -inset-4 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 rounded-[3rem] blur-2xl opacity-30 animate-pulse" />
+                    
+                    {/* Mirror Frame */}
+                    <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2.5rem] p-4 border-4 border-violet-500/30 shadow-2xl">
+                      {/* Corner Decorations */}
+                      <div className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 border-violet-400 rounded-tl-xl" />
+                      <div className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 border-fuchsia-400 rounded-tr-xl" />
+                      <div className="absolute bottom-3 left-3 w-8 h-8 border-b-4 border-l-4 border-purple-400 rounded-bl-xl" />
+                      <div className="absolute bottom-3 right-3 w-8 h-8 border-b-4 border-r-4 border-violet-400 rounded-br-xl" />
+
+                      {/* Scanning Lines Effect */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/10 to-transparent rounded-[2rem]"
+                        animate={{ y: ['-100%', '200%'] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      />
+
+                      <div className="text-center mb-3">
+                        <p className="text-violet-300 font-semibold text-sm">
+                          {result.preview_mode ? 'Preview Mode' : 'AI Visualization'}
+                        </p>
+                      </div>
+
+                      {/* Main Mirror Display - PURE IMAGE */}
+                      <div className="relative bg-black/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-violet-400/20">
+                        {/* Status Badge - Moved to top */}
+                        {result.ai_image && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.5, type: "spring" }}
+                            className={`absolute top-3 left-3 z-20 px-2 py-1 rounded-full flex items-center gap-1.5 shadow-lg text-xs ${
+                              result.preview_mode 
+                                ? 'bg-gradient-to-r from-orange-500 to-amber-500' 
+                                : 'bg-gradient-to-r from-emerald-500 to-green-500'
+                            }`}
+                          >
+                            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            <span className="text-white font-semibold">
+                              {result.preview_mode ? 'Preview' : 'AI'}
+                            </span>
+                          </motion.div>
+                        )}
+
+                        {/* Mirror Reflection - PURE IMAGE ONLY */}
+                        <div className="aspect-[9/14]">
+                          {result.ai_image ? (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 1.05 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.8 }}
+                              className="relative w-full h-full"
+                            >
+                              {/* Holographic Effect Overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-fuchsia-500/5 pointer-events-none z-10" />
+                              
+                              {/* The Visualization Result - PURE IMAGE */}
+                              <img 
+                                src={result.ai_image} 
+                                alt="Your Visualization" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.error('Image failed to load:', result.ai_image);
+                                  e.target.src = result.product.image_url;
+                                }}
+                              />
+                              
+                              {/* Shimmer Effect */}
+                              <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
+                                animate={{ x: ['-100%', '200%'] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear", delay: 1 }}
+                              />
+
+                              {/* Grid Overlay for Tech Feel */}
+                              <div className="absolute inset-0 opacity-5 pointer-events-none" 
+                                   style={{
+                                     backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent)',
+                                     backgroundSize: '50px 50px'
+                                   }}
+                              />
+                            </motion.div>
+                          ) : result.status === 'processing' ? (
+                            // Show loading animation while AI is processing
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900">
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                className="w-16 h-16 rounded-full border-4 border-violet-500/30 border-t-violet-500 mb-4"
+                              />
+                              <p className="text-violet-300 text-base font-semibold mb-1">AI Processing...</p>
+                              <p className="text-slate-400 text-xs">Creating visualization</p>
+                            </div>
+                          ) : (
+                            // Fallback: Show product if AI failed
+                            <div className="w-full h-full flex items-center justify-center bg-slate-900 p-4">
+                              <img 
+                                src={result.product.image_url} 
+                                alt="Product" 
+                                className="max-w-full max-h-full object-contain"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Share */}
-              <div className="bg-slate-900/50 rounded-3xl border border-slate-800 p-8 text-center">
-                <h3 className="text-2xl font-semibold mb-6">Share Your Experience</h3>
-                
-                <div className="flex flex-col items-center gap-6">
-                  <div className="bg-white p-4 rounded-2xl">
-                    <QRCodeSVG value={generateWhatsAppLink()} size={160} />
+                {/* Product Info Below - Separate from images */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="mt-6 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-violet-300 text-sm mb-1">Product</p>
+                      <p className="text-white text-xl font-bold">{result.product.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-violet-300 text-sm mb-1">Price</p>
+                      <p className="text-white text-xl font-bold">₹{result.product.price?.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-violet-300 text-sm mb-1">Category</p>
+                      <p className="text-white font-semibold">{result.product.category}</p>
+                    </div>
                   </div>
-                  <p className="text-slate-400">Scan to share via WhatsApp</p>
+                </motion.div>
+              </motion.div>
 
-                  <div className="flex gap-4">
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="bg-slate-800/50 backdrop-blur-sm rounded-3xl border border-slate-700 p-8"
+              >
+                <div className="flex flex-col items-center gap-6">
+                  {/* QR Code */}
+                  <div className="bg-white p-6 rounded-2xl shadow-xl">
+                    <QRCodeSVG value={generateWhatsAppLink()} size={140} />
+                  </div>
+                  <p className="text-slate-300 text-center">Scan to share your virtual try-on via WhatsApp</p>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 w-full max-w-2xl">
                     <Button
                       onClick={() => window.open(generateWhatsAppLink(), '_blank')}
-                      className="h-14 px-8 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold"
+                      className="flex-1 h-16 px-8 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-lg font-semibold shadow-lg shadow-green-500/30"
                     >
-                      <Share2 className="w-5 h-5 mr-3" /> Share to WhatsApp
+                      <Share2 className="w-6 h-6 mr-3" /> Share to WhatsApp
                     </Button>
-                    <Button onClick={handleRestart} variant="outline" className="h-14 px-8 rounded-full border-slate-700 text-white text-lg">
-                      Try Again
+                    <Button 
+                      onClick={handleRestart} 
+                      variant="outline" 
+                      className="flex-1 h-16 px-8 rounded-2xl border-2 border-violet-500 bg-slate-800/50 text-white text-lg font-semibold hover:bg-violet-600 hover:border-violet-400 transition-all"
+                    >
+                      <Sparkles className="w-6 h-6 mr-3" /> Try Another Item
                     </Button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         )}

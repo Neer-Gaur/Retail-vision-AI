@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-01-29T20:35:56.004783",
+  "total_tests": 7,
+  "passed_tests": 5,
+  "success_rate": "71.4%",
+  "test_details": [
+    {
+      "test": "Health Check - Status Response",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Visualize - Missing Data Validation",
+      "success": false,
+      "details": "Expected 422, got None"
+    },
+    {
+      "test": "Visualize - Invalid URL Handling",
+      "success": false,
+      "details": "Expected error status, got None"
+    },
+    {
+      "test": "Visualize - Fashion Industry Response Structure",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Visualize - AI Image Generation Success",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Visualize - Tiles Industry Response",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "API Key Configuration",
+      "success": true,
+      "details": "API key appears to be configured"
+    }
+  ]
+}

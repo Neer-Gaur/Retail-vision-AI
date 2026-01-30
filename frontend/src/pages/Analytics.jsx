@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 
 export default function Analytics() {
-  const { shop } = useAuthStore();
+  const { shop, refreshShop } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [inventory, setInventory] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -20,21 +20,41 @@ export default function Analytics() {
   const [timeRange, setTimeRange] = useState('7d');
 
   useEffect(() => {
-    if (shop?.id) loadData();
-  }, [shop?.id]);
+    const initializeAnalytics = async () => {
+      if (!shop) {
+        await refreshShop();
+      }
+      if (shop?.id) {
+        await loadData();
+      }
+    };
+    initializeAnalytics();
+  }, [shop?.id, refreshShop]);
 
   const loadData = async () => {
+    if (!shop?.id) {
+      console.log('No shop ID for analytics');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const [invRes, leadRes, vizRes] = await Promise.all([
         supabase.from('inventory').select('*').eq('shop_id', shop.id),
         supabase.from('leads').select('*').eq('shop_id', shop.id),
         supabase.from('visualizations').select('*, inventory(name, price)').eq('shop_id', shop.id)
       ]);
+      
+      if (invRes.error) console.error('Inventory error:', invRes.error);
+      if (leadRes.error) console.error('Leads error:', leadRes.error);
+      if (vizRes.error) console.error('Visualizations error:', vizRes.error);
+      
       setInventory(invRes.data || []);
       setLeads(leadRes.data || []);
       setVisualizations(vizRes.data || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Analytics load error:', error);
     } finally {
       setLoading(false);
     }

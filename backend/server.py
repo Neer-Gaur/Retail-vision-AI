@@ -10,6 +10,7 @@ import httpx
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent
+# Load environment variables
 load_dotenv(ROOT_DIR / '.env')
 
 app = FastAPI(title="RetailVision AI API")
@@ -38,6 +39,8 @@ class VisualizationResult(BaseModel):
     result_image: Optional[str] = None
     status: str  # 'success', 'failed', 'pending'
     error: Optional[str] = None
+    model: Optional[str] = None
+    description: Optional[str] = None
 
 class VisualizationResponse(BaseModel):
     results: List[VisualizationResult]
@@ -57,16 +60,18 @@ async def generate_visualization(
     product_name: str,
     industry: str
 ) -> VisualizationResult:
-    """Generate AI visualization using Nano Banana"""
+    """Generate AI visualization using Google Gemini Image Generation"""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         
-        api_key = os.getenv("EMERGENT_LLM_KEY")
+        # Get API key - prioritize user's Google key, fallback to Emergent
+        api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('EMERGENT_LLM_KEY')
+        
         if not api_key:
             return VisualizationResult(
                 product_name=product_name,
                 status="failed",
-                error="API key not configured"
+                error="No API key configured"
             )
         
         # Create unique session
@@ -74,43 +79,32 @@ async def generate_visualization(
         
         # Build the prompt based on industry
         if industry == 'fashion':
-            prompt = f"""You are an expert fashion AI stylist. 
-            
-I'm providing two images:
-1. First image: A customer's photo showing their face and body
-2. Second image: A clothing item called "{product_name}"
+            prompt = f"""Create a realistic visualization showing the person from the first image wearing the {product_name} from the second image.
 
-Your task: Create a realistic visualization showing the customer WEARING the clothing item from the second image. 
-
-CRITICAL REQUIREMENTS:
-- Keep the customer's face, hairstyle, and body type EXACTLY the same
-- The clothing should fit naturally on their body
-- Maintain realistic lighting and shadows
-- The result should look like a professional fashion photo
-- Only replace/add the clothing, keep everything else about the person identical
+Requirements:
+- The person should be wearing the {product_name} naturally
+- Maintain the person's pose and background
+- Ensure the product fits naturally on the person
+- Keep realistic lighting and shadows
+- Make it look like a professional fashion photoshoot
 
 Generate the visualization image now."""
         else:
-            prompt = f"""You are an expert interior design AI.
-            
-I'm providing two images:
-1. First image: A room or space photo
-2. Second image: A tile design called "{product_name}"
+            prompt = f"""Create a realistic visualization showing the {product_name} from the second image applied to the floor or wall in the room from the first image.
 
-Your task: Create a realistic visualization showing the tile from the second image applied to the floor or wall in the room from the first image.
-
-CRITICAL REQUIREMENTS:
-- Keep the room layout, furniture, and lighting the same
-- Apply the tile pattern realistically with proper perspective
-- Maintain proper scale and proportions
-- The result should look like a professional interior design render
+Requirements:
+- Apply the tile/material naturally to the surface
+- Maintain realistic perspective and lighting
+- Ensure proper alignment and spacing
+- Keep the original room's characteristics
+- Make it look professionally installed
 
 Generate the visualization image now."""
 
         chat = LlmChat(
             api_key=api_key, 
             session_id=session_id, 
-            system_message="You are an AI visualization expert that creates realistic product try-on images."
+            system_message="You are an expert fashion visualization AI that creates realistic product try-on images."
         )
         chat.with_model("gemini", "gemini-3-pro-image-preview").with_params(modalities=["image", "text"])
         
@@ -118,8 +112,8 @@ Generate the visualization image now."""
         msg = UserMessage(
             text=prompt,
             file_contents=[
-                ImageContent(customer_photo_base64),
-                ImageContent(product_image_base64)
+                ImageContent(customer_photo_base64),  # Customer photo
+                ImageContent(product_image_base64)     # Product image
             ]
         )
         
@@ -133,13 +127,15 @@ Generate the visualization image now."""
             return VisualizationResult(
                 product_name=product_name,
                 result_image=result_image,
-                status="success"
+                status="success",
+                model="Google Gemini",
+                description=text_response[:200] if text_response else None
             )
         else:
             return VisualizationResult(
                 product_name=product_name,
                 status="failed",
-                error="No image generated"
+                error="No image generated by AI"
             )
             
     except Exception as e:

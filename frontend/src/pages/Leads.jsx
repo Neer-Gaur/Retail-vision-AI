@@ -6,25 +6,44 @@ import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
 
 export default function Leads() {
-  const { shop } = useAuthStore();
+  const { shop, refreshShop } = useAuthStore();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (shop?.id) loadLeads();
-  }, [shop?.id]);
+    const initializeLeads = async () => {
+      if (!shop) {
+        await refreshShop();
+      }
+      if (shop?.id) {
+        await loadLeads();
+      }
+    };
+    initializeLeads();
+  }, [shop?.id, refreshShop]);
 
   const loadLeads = async () => {
+    if (!shop?.id) {
+      console.log('No shop ID for leads');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .eq('shop_id', shop.id)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setLeads(data || []);
+      
+      if (error) {
+        console.error('Leads load error:', error);
+      } else {
+        setLeads(data || []);
+      }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Leads exception:', error);
     } finally {
       setLoading(false);
     }
