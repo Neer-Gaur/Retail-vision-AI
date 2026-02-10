@@ -126,6 +126,30 @@ export default function Inventory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.name.trim()) {
+      toast.error('Product name is required');
+      return;
+    }
+    if (!formData.category) {
+      toast.error('Please select a category');
+      return;
+    }
+    if (parseFloat(formData.price) < 0) {
+      toast.error('Price cannot be negative');
+      return;
+    }
+    if (parseInt(formData.stock_count) < 0) {
+      toast.error('Stock cannot be negative');
+      return;
+    }
+    // Ensure image exists for new items
+    if (!editingItem && !imageFile && !formData.image_url) {
+      toast.error('Product image is required');
+      return;
+    }
+
     setSubmitting(true);
 
     try {

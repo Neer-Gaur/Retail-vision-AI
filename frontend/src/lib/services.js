@@ -1,6 +1,9 @@
 import { supabase } from './supabase';
 
-// Inventory Functions
+// 1. Define your local AI backend URL
+const AI_BACKEND_URL = 'http://localhost:8001';
+
+// Inventory Functions (KEPT EXACTLY AS IS)
 export const inventoryService = {
   async getAll(shopId) {
     const { data, error } = await supabase
@@ -106,7 +109,7 @@ export const inventoryService = {
   }
 };
 
-// Leads Functions
+// Leads Functions (KEPT EXACTLY AS IS)
 export const leadsService = {
   async getAll(shopId) {
     const { data, error } = await supabase
@@ -136,7 +139,7 @@ export const leadsService = {
   }
 };
 
-// Visualizations Functions
+// Visualizations Functions (UPDATED TO CALL LOCAL AI BACKEND)
 export const visualizationsService = {
   async getAll(shopId) {
     const { data, error } = await supabase
@@ -149,56 +152,50 @@ export const visualizationsService = {
     return data;
   },
 
-  async create(shopId, leadId, inputPhotoFile, resultPhotoUrl, itemsCompared) {
-    let input_photo_url = '';
-    
-    if (inputPhotoFile) {
-      const fileExt = inputPhotoFile.name?.split('.').pop() || 'jpg';
-      const fileName = `${shopId}/${Date.now()}.${fileExt}`;
-      
-      // If it's a data URL, convert to blob
-      if (typeof inputPhotoFile === 'string' && inputPhotoFile.startsWith('data:')) {
-        const response = await fetch(inputPhotoFile);
-        const blob = await response.blob();
-        
-        const { error: uploadError } = await supabase.storage
-          .from('customer-uploads')
-          .upload(fileName, blob);
-        
-        if (uploadError) throw uploadError;
-      } else {
-        const { error: uploadError } = await supabase.storage
-          .from('customer-uploads')
-          .upload(fileName, inputPhotoFile);
-        
-        if (uploadError) throw uploadError;
-      }
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('customer-uploads')
-        .getPublicUrl(fileName);
-      
-      input_photo_url = publicUrl;
-    }
+  /**
+   * REWRITTEN: Now sends request to Python server at http://localhost:8001
+   */
+  async create(shopId, leadId, customerPhotoUrl, productUrls, productNames, industry) {
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/api/visualize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_photo_url: customerPhotoUrl,
+          product_image_urls: productUrls,
+          product_names: productNames,
+          industry: industry
+        }),
+      });
 
-    const { data, error } = await supabase
-      .from('visualizations')
-      .insert([{
-        shop_id: shopId,
-        lead_id: leadId,
-        input_photo_url,
-        result_photo_url: resultPhotoUrl || '',
-        items_compared: itemsCompared
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+      if (!response.ok) throw new Error('AI Backend Error');
+      
+      const aiResult = await response.json();
+      
+      // Save the result to Supabase so it shows in your history
+      const { data, error } = await supabase
+        .from('visualizations')
+        .insert([{
+          shop_id: shopId,
+          lead_id: leadId,
+          customer_photo_url: inputPhotoUrl,
+          result_photo_url: aiResult.results[0].result_image || ''
+          
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { supabaseData: data, aiData: aiResult.results };
+
+    } catch (err) {
+      console.error("AI Visualization Failed:", err);
+      throw err;
+    }
   }
 };
 
-// Analytics Functions
+// Analytics Functions (KEPT EXACTLY AS IS)
 export const analyticsService = {
   async getStats(shopId) {
     const [inventory, leads, visualizations] = await Promise.all([
@@ -207,7 +204,6 @@ export const analyticsService = {
       supabase.from('visualizations').select('id, items_compared, created_at').eq('shop_id', shopId)
     ]);
 
-    // Calculate most visualized items
     const itemCounts = {};
     visualizations.data?.forEach(viz => {
       viz.items_compared?.forEach(itemId => {
@@ -219,7 +215,6 @@ export const analyticsService = {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
 
-    // Get full item details
     const topItemsDetails = await Promise.all(
       topItems.map(async ([itemId, count]) => {
         const { data } = await supabase

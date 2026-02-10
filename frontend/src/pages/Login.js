@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mail, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Sparkles, Scan } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,8 +15,25 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const validateForm = () => {
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+
+    if (!password) {
+      toast.error('Password is required');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setLoading(true);
 
     try {
@@ -31,26 +48,27 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-slate-950">
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-black text-white selection:bg-red-500/30">
       {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-rose-900/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
       {/* Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px] opacity-20 pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20, rotateX: -10 }}
         animate={{ opacity: 1, y: 0, rotateX: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="w-full max-w-md relative z-10"
+        style={{ perspective: '1000px' }}
       >
         <Button
           onClick={() => navigate('/')}
           variant="ghost"
-          className="mb-8 rounded-full text-white/70 hover:text-white hover:bg-white/10"
+          className="mb-8 rounded-full text-slate-400 hover:text-white hover:bg-white/10"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home
@@ -62,7 +80,7 @@ export default function Login() {
           transition={{ type: "spring", stiffness: 300 }}
         >
           {/* Card Glow Effect */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 rounded-3xl blur-xl opacity-50" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-rose-600 rounded-3xl blur-xl opacity-30" />
           
           {/* Main Card */}
           <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
@@ -72,8 +90,8 @@ export default function Login() {
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -top-8 left-1/2 -translate-x-1/2"
             >
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/50">
-                <Sparkles className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-500/30 border border-white/10">
+                <Scan className="w-8 h-8 text-white" />
               </div>
             </motion.div>
 
@@ -88,14 +106,14 @@ export default function Login() {
                   Email Address
                 </Label>
                 <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-400 transition-colors" />
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
+                    className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
                     placeholder="you@example.com"
                   />
                 </div>
@@ -106,14 +124,14 @@ export default function Login() {
                   Password
                 </Label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-400 transition-colors" />
                   <Input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
+                    className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
                     placeholder="••••••••"
                   />
                 </div>
@@ -126,7 +144,7 @@ export default function Login() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-lg font-semibold shadow-lg shadow-violet-500/25 transition-all"
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white text-lg font-semibold shadow-lg shadow-red-500/20 border border-white/5 transition-all"
                 >
                   {loading ? (
                     <motion.div
@@ -145,7 +163,7 @@ export default function Login() {
               Don't have an account?{' '}
               <button
                 onClick={() => navigate('/signup')}
-                className="text-violet-400 font-semibold hover:text-violet-300 transition-colors"
+                className="text-red-400 font-semibold hover:text-red-300 transition-colors"
               >
                 Sign up
               </button>

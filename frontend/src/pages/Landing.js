@@ -1,303 +1,373 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Sparkles, Zap, Shield, ArrowRight, Star, TrendingUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Zap, Shield, ArrowRight, ChevronRight, ChevronLeft, Scan, Store, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../store/authStore';
 
-const features = [
+// --- Assets & Data ---
+
+const CAROUSEL_SLIDES = [
   {
-    icon: Sparkles,
-    title: 'AI-Powered Visualization',
-    description: 'Revolutionary virtual try-on technology for fashion and tiles'
+    id: 1,
+    title: "The Guesswork",
+    desc: "Customers struggle to visualize how a saree or tile looks in real life.",
+    video: "/assets/video1.mp4", 
+    caption: "Before RetailVision"
   },
   {
-    icon: Zap,
-    title: 'Smart Kiosk Mode',
-    description: 'Secure fullscreen experience designed for physical showrooms'
+    id: 2,
+    title: "The Magic Mirror",
+    desc: "AI instantly drapes the product on them or their room. Zero wait time.",
+    video: "/assets/video2.mp4",
+    caption: "The Kiosk Experience"
   },
   {
-    icon: Shield,
-    title: 'Multi-Tenant Architecture',
-    description: 'Complete data isolation with enterprise-grade security'
+    id: 3,
+    title: "The Conversion",
+    desc: "Confidence soars. Sales happen. Customers share the look on WhatsApp.",
+    video: "/assets/video3.mp4", 
+    caption: "Result: Sold"
   }
 ];
 
-const stats = [
-  { value: '10K+', label: 'Visualizations' },
-  { value: '500+', label: 'Showrooms' },
-  { value: '98%', label: 'Satisfaction' },
-  { value: '24/7', label: 'Support' }
-];
-
-const testimonials = [
-  { name: 'Priya Sharma', role: 'Fashion Boutique', text: 'Revolutionary! Customer engagement increased by 300%', rating: 5 },
-  { name: 'Rajesh Kumar', role: 'Tile Showroom', text: 'Game changer for our business. Customers love it!', rating: 5 },
-  { name: 'Anita Desai', role: 'Retail Manager', text: 'The best investment we made this year', rating: 5 }
+const SHOWROOMS = [
+  {
+    name: "Kashvi Sarees",
+    location: "Mumbai, Bandra",
+    image: "/assets/showroom1.png"
+  },
+  {
+    name: "Ceramic Studio",
+    location: "Delhi, GK-2",
+    image: "/assets/showroom2.png"
+  },
+  {
+    name: "Vogue Ethnic",
+    location: "Bangalore, Indiranagar",
+    image: "/assets/showroom3.png"
+  }
 ];
 
 export default function Landing() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) navigate('/dashboard');
   }, [user, navigate]);
 
+  // Auto-advance is handled by video onEnded
+  
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length);
+
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
-      {/* Mesh Background */}
-      <div className="fixed inset-0 gradient-mesh opacity-40 -z-10" />
+    <div className="min-h-screen bg-black text-white overflow-x-hidden selection:bg-red-500/30">
+      
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-rose-900/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px] opacity-20" />
+      </div>
 
       {/* Navigation */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        className="fixed top-0 left-0 right-0 z-50 glass border-b border-slate-200/50"
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-white/5 bg-black/50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-3"
-          >
-            <div className="w-10 h-10 rounded-2xl gradient-primary flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold">RetailVision AI</span>
-          </motion.div>
+          <div className="flex items-center gap-3">
+            <img src="/assets/logo.png" alt="RetailVision Logo" className="w-10 h-10 object-contain" />
+            <span className="text-2xl font-bold tracking-tight">RetailVision<span className="text-red-500">.</span></span>
+          </div>
 
           <div className="flex gap-4">
-            <Button
-              onClick={() => navigate('/login')}
-              variant="ghost"
-              className="rounded-full"
-            >
+            <Button onClick={() => navigate('/login')} variant="ghost" className="text-white hover:bg-white/10 rounded-full hidden sm:flex">
               Login
             </Button>
-            <Button
+            <Button 
               onClick={() => navigate('/signup')}
-              className="rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+              className="rounded-full bg-red-600 hover:bg-red-700 text-white border-none shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all hover:scale-105 text-sm sm:text-base px-4 sm:px-6"
             >
               Get Started
-              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-7xl mx-auto">
+      {/* HERO SECTION */}
+      <section className="relative pt-32 pb-20 px-6 min-h-screen flex items-center">
+        <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center">
+          
+          {/* Hero Text */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="text-center lg:text-left"
           >
-            <div className="inline-block mb-6">
-              <span className="px-6 py-3 bg-gradient-to-r from-violet-100 to-purple-100 rounded-full text-sm font-semibold text-violet-900">
-                ✨ The Future of Retail is Here
-              </span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-medium text-sm mb-8">
+              <Sparkles className="w-4 h-4" />
+              <span>Next-Gen Retail Experience</span>
             </div>
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tight mb-8">
-              Transform Your
-              <br />
-              <span className="text-gradient">Showroom Experience</span>
+            
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold leading-tight mb-6">
+              The <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-rose-600">Magic Mirror</span><br />
+              for Your Store.
             </h1>
-            <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
-              AI-powered virtual try-on for fashion and tile showrooms. Let customers visualize products instantly.
+            
+            <p className="text-lg sm:text-xl text-slate-400 mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+              Transform your saree or tile showroom into a futuristic experience. 
+              Let customers virtually try before they buy.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={() => navigate('/signup')}
-                size="lg"
-                className="rounded-full h-14 px-8 text-lg bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
-              >
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Button onClick={() => navigate('/signup')} className="h-14 px-8 rounded-full bg-white text-black hover:bg-slate-200 text-lg font-semibold transition-all hover:scale-105 w-full sm:w-auto">
                 Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-              <Button
-                onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-                size="lg"
-                variant="outline"
-                className="rounded-full h-14 px-8 text-lg"
-              >
-                Watch Demo
+              <Button onClick={() => document.getElementById('demo').scrollIntoView()} variant="outline" className="h-14 px-8 rounded-full border-slate-700 text-white hover:bg-white/10 text-lg w-full sm:w-auto">
+                See it in Action
               </Button>
             </div>
           </motion.div>
 
-          {/* Hero Image */}
+          {/* 3D Kiosk Visual - VERTICAL FULL SCREEN (Hidden on mobile) */}
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="relative"
+            initial={{ opacity: 0, rotateY: 30, x: 50 }}
+            animate={{ opacity: 1, rotateY: -10, x: 0 }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
+            className="relative hidden lg:block xl:block"
+            style={{ perspective: '1200px' }}
           >
-            <div className="glass rounded-3xl p-4 shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80"
-                alt="Showroom"
-                className="w-full rounded-2xl"
-              />
-            </div>
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-r from-violet-400 to-purple-400 rounded-full blur-3xl opacity-60 animate-float" />
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full blur-3xl opacity-60 animate-float" style={{ animationDelay: '2s' }} />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 bg-gradient-to-b from-white to-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <div className="text-5xl font-bold text-gradient mb-2">{stat.value}</div>
-                <div className="text-slate-600 font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
-              Everything You <span className="text-gradient">Need</span>
-            </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Powerful features designed for modern showrooms
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  whileHover={{ y: -8 }}
-                  className="glass rounded-3xl p-8 hover:shadow-2xl transition-all"
-                >
-                  <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mb-6">
-                    <Icon className="w-8 h-8 text-white" />
+            {/* The Vertical Kiosk Container */}
+            <motion.div 
+              animate={{ y: [0, -20, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-[320px] h-[640px] mx-auto bg-black rounded-[2rem] border-[12px] border-zinc-900 shadow-2xl overflow-hidden transform-style-3d"
+              style={{ boxShadow: '0 0 100px -20px rgba(220, 38, 38, 0.4)' }}
+            >
+              {/* Glossy Screen Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none z-30 opacity-50" />
+              
+              {/* Screen Content */}
+              <div className="absolute inset-0 bg-zinc-950 flex flex-col">
+                {/* Header Area */}
+                <div className="h-16 bg-zinc-900 flex items-center justify-between px-6 border-b border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <img src="/assets/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
+                    <span className="font-bold text-white text-sm">RetailVision</span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4">{feature.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">{feature.description}</p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-32 px-6 bg-gradient-to-b from-white to-slate-50">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-4">
-              Loved by <span className="text-gradient">Thousands</span>
-            </h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="glass rounded-3xl p-8"
-              >
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  ))}
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 </div>
-                <p className="text-slate-700 mb-6 leading-relaxed">"{testimonial.text}"</p>
-                <div>
-                  <div className="font-bold">{testimonial.name}</div>
-                  <div className="text-sm text-slate-500">{testimonial.role}</div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-32 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="glass-dark rounded-3xl p-16 text-white relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-purple-600 opacity-90" />
-            <div className="relative z-10">
-              <h2 className="text-5xl font-bold mb-6">
-                Ready to Transform Your Business?
-              </h2>
-              <p className="text-xl text-white/90 mb-8">
-                Join hundreds of showrooms already using RetailVision AI
-              </p>
-              <Button
-                onClick={() => navigate('/signup')}
-                size="lg"
-                className="rounded-full h-14 px-12 text-lg bg-white text-violet-600 hover:bg-slate-100"
-              >
-                Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white/80">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> No credit card required
-                </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> 14-day free trial
+                {/* Main Visual Area */}
+                <div className="flex-1 relative">
+                  <img 
+                    src="/assets/kiosk-screen.png" 
+                    alt="Kiosk Mode" 
+                    className="w-full h-full object-cover opacity-90"
+                  />
+                  
+                  {/* Floating AR UI Elements */}
+                  <div className="absolute bottom-8 left-4 right-4 bg-black/60 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                    <div className="flex gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
+                        <img src="/assets/kiosk-thumb.png" className="w-full h-full object-cover rounded-lg" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-red-400 font-mono mb-1">ANALYZING FIT...</div>
+                        <div className="h-1.5 w-full bg-zinc-700 rounded-full overflow-hidden">
+                          <motion.div 
+                            className="h-full bg-red-500"
+                            animate={{ width: ["0%", "100%"] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {/* Kiosk Base Stand (Visual Hint) */}
+              <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-10 bg-zinc-800 blur-md z-0" />
+            </motion.div>
+
+            {/* Floating Elements around Kiosk */}
+            <motion.div 
+              animate={{ y: [0, 30, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              className="absolute top-32 -right-12 bg-zinc-900/90 backdrop-blur-md p-4 rounded-2xl border border-red-500/30 shadow-xl z-40"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-red-500/20 p-2 rounded-lg text-red-400">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Render Time</div>
+                  <div className="font-bold text-white">0.08s</div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              animate={{ y: [0, -20, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              className="absolute bottom-40 -left-20 bg-zinc-900/90 backdrop-blur-md p-4 rounded-2xl border border-red-500/30 shadow-xl z-40"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-500/20 p-2 rounded-lg text-blue-400">
+                  <Scan className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">AI Precision</div>
+                  <div className="font-bold text-white">100% Match</div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto text-center text-slate-600">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-slate-900">RetailVision AI</span>
+      {/* CAROUSEL SECTION */}
+      <section id="demo" className="py-24 bg-zinc-950 border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">The Magic <span className="text-red-500">Experience</span></h2>
+            <p className="text-slate-400 text-lg">From hesitation to purchase in 3 steps.</p>
           </div>
-          <p className="text-sm">© 2025 RetailVision AI. All rights reserved.</p>
+
+          <div className="relative max-w-5xl mx-auto">
+            <div className="aspect-[16/9] relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 group bg-zinc-900">
+              
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0"
+                >
+                  <video 
+                    key={CAROUSEL_SLIDES[currentSlide].video} // Force re-render on video change
+                    src={CAROUSEL_SLIDES[currentSlide].video} 
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                    onEnded={nextSlide}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                  
+                  <div className="absolute bottom-0 left-0 p-6 md:p-16">
+                    <span className="text-red-500 font-mono text-xs md:text-sm tracking-widest uppercase mb-2 block">
+                      {CAROUSEL_SLIDES[currentSlide].caption}
+                    </span>
+                    <h3 className="text-2xl md:text-6xl font-bold mb-2 md:mb-4">{CAROUSEL_SLIDES[currentSlide].title}</h3>
+                    <p className="text-sm md:text-xl text-slate-300 max-w-2xl">{CAROUSEL_SLIDES[currentSlide].desc}</p>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Controls */}
+              <button 
+                onClick={prevSlide}
+                className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 hover:bg-red-600 backdrop-blur-sm text-white transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
+              >
+                <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+              <button 
+                onClick={nextSlide}
+                className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-black/50 hover:bg-red-600 backdrop-blur-sm text-white transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
+              >
+                <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+
+              {/* Indicators */}
+              <div className="absolute bottom-4 md:bottom-8 right-4 md:right-8 flex gap-2">
+                {CAROUSEL_SLIDES.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentSlide ? 'w-6 md:w-8 bg-red-500' : 'w-2 bg-white/30'}`} 
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
+
+      {/* SHOWROOMS SECTION */}
+      <section className="py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">Deployed at <span className="text-red-500">Modern Retailers</span></h2>
+              <p className="text-slate-400">Leading the revolution in physical retail.</p>
+            </div>
+            <Button variant="link" className="text-white hover:text-red-400 hidden md:flex">View all partners <ArrowRight className="w-4 h-4 ml-2" /></Button>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {SHOWROOMS.map((store, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="group relative rounded-2xl overflow-hidden aspect-[4/5] cursor-pointer"
+              >
+                <img 
+                  src={store.image} 
+                  alt={store.name} 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                
+                <div className="absolute bottom-0 left-0 p-6 w-full">
+                  <div className="w-12 h-12 mb-4 bg-white/10 backdrop-blur-md rounded-lg flex items-center justify-center border border-white/20">
+                    <Store className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-1">{store.name}</h3>
+                  <div className="flex items-center text-slate-300 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse" />
+                    Live in {store.location}
+                  </div>
+                </div>
+
+                {/* Border Hover Effect */}
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-red-500/50 rounded-2xl transition-colors duration-300" />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FOOTER */}
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-red-600 to-rose-700 rounded-[3rem] p-8 md:p-20 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+          
+          <div className="relative z-10">
+            <h2 className="text-3xl md:text-6xl font-bold mb-6">Ready to upgrade your showroom?</h2>
+            <p className="text-lg md:text-xl text-red-100 mb-10 max-w-2xl mx-auto">
+              Join the elite group of retailers transforming customer experience today.
+            </p>
+            <Button 
+              onClick={() => navigate('/signup')}
+              className="h-16 px-10 rounded-full bg-white text-red-600 hover:bg-slate-100 text-xl font-bold shadow-2xl w-full sm:w-auto"
+            >
+              Get RetailVision AI
+            </Button>
+            <p className="mt-6 text-sm text-red-200 opacity-80">No hardware required. Runs on any browser.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer className="py-8 text-center text-slate-600 text-sm bg-black border-t border-white/5">
+        <p>© 2026 RetailVision AI. All rights reserved.</p>
       </footer>
     </div>
   );

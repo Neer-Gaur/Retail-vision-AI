@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Mail, Lock, Store, Shield, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Store, Shield, Scan, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,8 +21,39 @@ export default function Signup() {
   });
   const [loading, setLoading] = useState(false);
 
+  const validateForm = () => {
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+
+    // Password length check
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return false;
+    }
+
+    // Shop name check
+    if (!formData.shop_name.trim()) {
+      toast.error('Shop name is required');
+      return false;
+    }
+
+    // PIN check
+    if (!/^\d{4}$/.test(formData.admin_pin)) {
+      toast.error('PIN must be exactly 4 digits');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     setLoading(true);
 
     try {
@@ -63,16 +94,15 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-slate-950">
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-black text-white selection:bg-red-500/30">
       {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-3xl" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-900/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
       {/* Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px] opacity-20 pointer-events-none" />
 
       <AnimatePresence mode="wait">
         {step === 'form' && (
@@ -88,7 +118,7 @@ export default function Signup() {
             <Button
               onClick={() => navigate('/')}
               variant="ghost"
-              className="mb-8 rounded-full text-white/70 hover:text-white hover:bg-white/10"
+              className="mb-8 rounded-full text-slate-400 hover:text-white hover:bg-white/10"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
@@ -100,7 +130,7 @@ export default function Signup() {
               transition={{ type: "spring", stiffness: 300 }}
             >
               {/* Card Glow Effect */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 rounded-3xl blur-xl opacity-50" />
+              <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-rose-600 rounded-3xl blur-xl opacity-30" />
               
               {/* Main Card */}
               <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-3xl p-8 border border-white/10 shadow-2xl">
@@ -110,8 +140,8 @@ export default function Signup() {
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                   className="absolute -top-8 left-1/2 -translate-x-1/2"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/50">
-                    <Sparkles className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-500/30 border border-white/10">
+                    <Scan className="w-8 h-8 text-white" />
                   </div>
                 </motion.div>
 
@@ -133,7 +163,7 @@ export default function Signup() {
                         <RadioGroupItem value="fashion" id="fashion" className="peer sr-only" />
                         <Label
                           htmlFor="fashion"
-                          className="flex flex-col items-center justify-center rounded-xl border-2 border-slate-700 bg-slate-800/50 p-4 hover:bg-slate-800 peer-data-[state=checked]:border-violet-500 peer-data-[state=checked]:bg-violet-500/20 cursor-pointer transition-all"
+                          className="flex flex-col items-center justify-center rounded-xl border border-slate-700 bg-slate-800/50 p-4 hover:bg-slate-800 peer-data-[state=checked]:border-red-500 peer-data-[state=checked]:bg-red-500/10 cursor-pointer transition-all"
                         >
                           <span className="text-2xl mb-2">👗</span>
                           <span className="text-sm font-semibold text-white">Fashion</span>
@@ -143,7 +173,7 @@ export default function Signup() {
                         <RadioGroupItem value="tiles" id="tiles" className="peer sr-only" />
                         <Label
                           htmlFor="tiles"
-                          className="flex flex-col items-center justify-center rounded-xl border-2 border-slate-700 bg-slate-800/50 p-4 hover:bg-slate-800 peer-data-[state=checked]:border-violet-500 peer-data-[state=checked]:bg-violet-500/20 cursor-pointer transition-all"
+                          className="flex flex-col items-center justify-center rounded-xl border border-slate-700 bg-slate-800/50 p-4 hover:bg-slate-800 peer-data-[state=checked]:border-red-500 peer-data-[state=checked]:bg-red-500/10 cursor-pointer transition-all"
                         >
                           <span className="text-2xl mb-2">🏠</span>
                           <span className="text-sm font-semibold text-white">Tiles</span>
@@ -158,13 +188,13 @@ export default function Signup() {
                       Shop Name
                     </Label>
                     <div className="relative group">
-                      <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                      <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-400 transition-colors" />
                       <Input
                         id="shop_name"
                         value={formData.shop_name}
                         onChange={(e) => setFormData({ ...formData, shop_name: e.target.value })}
                         required
-                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
+                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
                         placeholder="My Awesome Shop"
                       />
                     </div>
@@ -176,14 +206,14 @@ export default function Signup() {
                       Email Address
                     </Label>
                     <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-400 transition-colors" />
                       <Input
                         id="email"
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
-                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
+                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
                         placeholder="you@example.com"
                       />
                     </div>
@@ -195,7 +225,7 @@ export default function Signup() {
                       Password
                     </Label>
                     <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-400 transition-colors" />
                       <Input
                         id="password"
                         type="password"
@@ -203,7 +233,7 @@ export default function Signup() {
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         required
                         minLength={6}
-                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20"
+                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
                         placeholder="••••••••"
                       />
                     </div>
@@ -215,7 +245,7 @@ export default function Signup() {
                       Kiosk Exit PIN (4 digits)
                     </Label>
                     <div className="relative group">
-                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-400 transition-colors" />
                       <Input
                         id="admin_pin"
                         type="text"
@@ -224,7 +254,7 @@ export default function Signup() {
                         value={formData.admin_pin}
                         onChange={(e) => setFormData({ ...formData, admin_pin: e.target.value.replace(/\D/g, '') })}
                         required
-                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-violet-500/20 tracking-widest"
+                        className="h-12 pl-12 rounded-xl bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20 tracking-widest font-mono"
                         placeholder="1234"
                       />
                     </div>
@@ -238,7 +268,7 @@ export default function Signup() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-lg font-semibold shadow-lg shadow-violet-500/25 transition-all"
+                      className="w-full h-12 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white text-lg font-semibold shadow-lg shadow-red-500/20 border border-white/5 transition-all"
                     >
                       {loading ? (
                         <motion.div
@@ -257,7 +287,7 @@ export default function Signup() {
                   Already have an account?{' '}
                   <button
                     onClick={() => navigate('/login')}
-                    className="text-violet-400 font-semibold hover:text-violet-300 transition-colors"
+                    className="text-red-400 font-semibold hover:text-red-300 transition-colors"
                   >
                     Sign in
                   </button>
@@ -285,16 +315,16 @@ export default function Signup() {
               <motion.div
                 animate={{ scale: [1, 2], opacity: [0.5, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute inset-0 w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                className="absolute inset-0 w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-red-500 to-rose-500"
               />
               <motion.div
                 animate={{ scale: [1, 2], opacity: [0.5, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-                className="absolute inset-0 w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                className="absolute inset-0 w-32 h-32 mx-auto rounded-full bg-gradient-to-r from-red-500 to-rose-500"
               />
               
               {/* Check Icon */}
-              <div className="relative w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-2xl shadow-violet-500/50">
+              <div className="relative w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-2xl shadow-red-500/50 border border-white/10">
                 <motion.div
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
@@ -327,12 +357,12 @@ export default function Signup() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="flex items-center justify-center gap-2 text-violet-400"
+              className="flex items-center justify-center gap-2 text-red-400"
             >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full"
+                className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full"
               />
               <span>Redirecting to login...</span>
             </motion.div>

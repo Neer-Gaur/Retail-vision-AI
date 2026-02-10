@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, X, Check, Loader2, Share2, Upload, 
-  SlidersHorizontal, ArrowUpDown, Sparkles, Eye, LogOut
+  SlidersHorizontal, ArrowUpDown, Sparkles, Eye, LogOut,
+  Zap, Scan, Monitor, Maximize2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -210,6 +211,19 @@ export default function Kiosk() {
 
   const handleLeadSubmit = async (e) => {
     e.preventDefault();
+
+    if (!leadData.customer_name.trim()) {
+      toast.error('Please enter your name');
+      return;
+    }
+
+    // Phone number validation (10 digits)
+    const phoneDigits = leadData.whatsapp_number.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      toast.error('Please enter a valid 10-digit WhatsApp number');
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('leads')
@@ -305,7 +319,7 @@ export default function Kiosk() {
       try {
         toast.info('Sending images to AI...');
         
-        const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+        const BACKEND_URL = 'http://localhost:8001';
         const response = await fetch(`${BACKEND_URL}/api/visualize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -457,7 +471,15 @@ export default function Kiosk() {
   const overlayType = shop?.industry === 'fashion' ? 'silhouette' : 'grid';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative">
+    <div className="h-screen w-full overflow-hidden bg-black text-white relative font-sans selection:bg-red-500/30">
+      
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-red-900/10 rounded-full blur-[150px] animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-rose-900/10 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-10" />
+      </div>
+
       {/* Logo for Exit (Admin) */}
       <motion.div
         ref={logoRef}
@@ -466,97 +488,95 @@ export default function Kiosk() {
         onMouseLeave={handleLogoMouseUp}
         onTouchStart={handleLogoMouseDown}
         onTouchEnd={handleLogoMouseUp}
-        className="absolute top-6 left-6 z-50 cursor-pointer select-none"
+        className="absolute top-8 left-8 z-50 cursor-pointer select-none group"
         data-testid="kiosk-logo"
       >
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
-          <Sparkles className="w-6 h-6 text-white" />
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-[0_0_20px_rgba(220,38,38,0.4)] group-hover:scale-105 transition-transform">
+          <Scan className="w-8 h-8 text-white" />
         </div>
         {longPressDuration > 0 && (
-          <div className="absolute -bottom-2 left-0 w-12 h-1 bg-slate-200 rounded overflow-hidden">
+          <div className="absolute -bottom-4 left-0 w-14 h-1 bg-white/20 rounded-full overflow-hidden">
             <div
-              className="h-full bg-violet-500 rounded transition-all"
+              className="h-full bg-red-500 rounded-full transition-all duration-100"
               style={{ width: `${(longPressDuration / 5000) * 100}%` }}
             />
           </div>
         )}
       </motion.div>
 
-      {/* Exit Session Button (Customer) - Show only after lead capture */}
+      {/* Exit Session Button (Customer) */}
       {step !== 'lead' && (
         <motion.button
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           onClick={handleExitSession}
-          className="absolute top-6 right-6 z-50 px-4 py-2 rounded-full bg-red-500/90 hover:bg-red-600 backdrop-blur-sm border border-red-400/30 flex items-center gap-2 shadow-lg transition-all"
+          className="absolute top-8 right-8 z-50 px-6 py-3 rounded-full bg-red-600/10 hover:bg-red-600 border border-red-500/30 flex items-center gap-3 backdrop-blur-md transition-all group"
         >
-          <LogOut className="w-5 h-5 text-white" />
-          <span className="text-white font-semibold">Exit Session</span>
+          <LogOut className="w-5 h-5 text-red-400 group-hover:text-white" />
+          <span className="text-red-400 font-semibold group-hover:text-white">Exit Session</span>
         </motion.button>
       )}
 
       <AnimatePresence mode="wait">
+        
         {/* STEP 1: Lead Capture */}
         {step === 'lead' && (
           <motion.div
             key="lead"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-full flex items-center justify-center p-8"
-            data-testid="lead-capture-step"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            className="h-full flex items-center justify-center p-8 relative z-10"
           >
-            <div className="max-w-md w-full">
-              <div className="absolute -inset-1 bg-gradient-to-r from-violet-400 to-purple-400 rounded-3xl blur-xl opacity-30" />
-              <div className="relative bg-white rounded-3xl border border-slate-200 p-8 shadow-xl">
-                <div className="text-center mb-8">
+            <div className="max-w-lg w-full">
+              <div className="relative bg-zinc-900/80 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-10 shadow-2xl overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-rose-500 to-red-500" />
+                
+                <div className="text-center mb-10">
                   <motion.div
                     animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-violet-200"
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-20 h-20 rounded-3xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-900/30"
                   >
-                    <Sparkles className="w-8 h-8 text-white" />
+                    <Sparkles className="w-10 h-10 text-white" />
                   </motion.div>
-                  <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                    Welcome to {shop?.shop_name}
+                  <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
+                    {shop?.shop_name}
                   </h1>
-                  <p className="text-slate-500">
-                    Enter your details to start
+                  <p className="text-slate-400 text-lg">
+                    Experience the Magic Mirror
                   </p>
                 </div>
 
-                <form onSubmit={handleLeadSubmit} className="space-y-5">
-                  <div>
-                    <Label className="text-slate-700 mb-2 block">Your Name</Label>
+                <form onSubmit={handleLeadSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-base ml-1">Your Name</Label>
                     <Input
-                      data-testid="lead-name-input"
                       value={leadData.customer_name}
                       onChange={(e) => setLeadData({ ...leadData, customer_name: e.target.value })}
                       required
-                      className="h-14 rounded-xl border-slate-200 text-lg bg-white text-slate-900"
+                      className="h-16 rounded-2xl bg-black/50 border-white/10 text-xl text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20 transition-all px-6"
                       placeholder="Enter your name"
                     />
                   </div>
 
-                  <div>
-                    <Label className="text-slate-700 mb-2 block">WhatsApp Number</Label>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 text-base ml-1">WhatsApp Number</Label>
                     <Input
-                      data-testid="lead-whatsapp-input"
                       type="tel"
                       value={leadData.whatsapp_number}
                       onChange={(e) => setLeadData({ ...leadData, whatsapp_number: e.target.value })}
                       required
-                      className="h-14 rounded-xl border-slate-200 text-lg bg-white text-slate-900"
+                      className="h-16 rounded-2xl bg-black/50 border-white/10 text-xl text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20 transition-all px-6 font-mono"
                       placeholder="+91 98765 43210"
                     />
                   </div>
 
                   <Button
-                    data-testid="lead-submit-btn"
                     type="submit"
-                    className="w-full h-14 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-lg font-semibold shadow-lg shadow-violet-200"
+                    className="w-full h-16 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xl font-bold shadow-lg shadow-red-600/20 mt-4 transition-all hover:scale-[1.02]"
                   >
-                    Continue
+                    Start Experience <ArrowUpDown className="ml-2 w-5 h-5 rotate-90" />
                   </Button>
                 </form>
               </div>
@@ -571,63 +591,77 @@ export default function Kiosk() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex flex-col items-center justify-center p-8"
-            data-testid="camera-step"
+            className="h-full flex flex-col items-center justify-center p-8 relative z-10"
           >
-            <h2 className="text-4xl font-bold mb-2 text-center">Capture Your Photo</h2>
-            <p className="text-slate-400 mb-8 text-center max-w-xl">
-              {shop?.industry === 'fashion' 
-                ? 'Take a photo to see how products look on you'
-                : 'Capture the space to visualize tiles'}
-            </p>
+            <motion.div 
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="text-center mb-10"
+            >
+              <h2 className="text-5xl font-bold text-white mb-4">Capture Your Look</h2>
+              <p className="text-xl text-slate-400">
+                {shop?.industry === 'fashion' 
+                  ? 'Stand in front of the mirror for a perfect fit.'
+                  : 'Capture the room to visualize new tiles.'}
+              </p>
+            </motion.div>
 
             {showCamera ? (
-              <div className="relative w-full max-w-2xl aspect-[3/4] bg-black rounded-3xl overflow-hidden mb-8">
+              <div className="relative w-full max-w-[600px] aspect-[3/4] bg-black rounded-[3rem] overflow-hidden border-8 border-zinc-800 shadow-2xl">
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transform scale-x-[-1]" // Mirror effect
                 />
-                {overlayType === 'silhouette' && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <svg className="w-1/2 h-5/6 opacity-30" viewBox="0 0 200 400" fill="white">
-                      <ellipse cx="100" cy="80" rx="50" ry="60" />
-                      <rect x="60" y="130" width="80" height="150" rx="10" />
-                    </svg>
+                
+                {/* Camera UI Overlay */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-8 right-8 flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-xs font-mono text-red-500">LIVE</span>
                   </div>
-                )}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
-                  <Button onClick={stopCamera} variant="outline" className="rounded-full h-12 px-6 bg-white/10 border-white/20 text-white">
-                    Cancel
-                  </Button>
-                  <Button
+                  
+                  {/* Face Frame Guide */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-[80%] h-[70%] border-2 border-white/20 rounded-[4rem] relative">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-1 bg-white/30 rounded-full" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-32 h-1 bg-white/30 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-8 pointer-events-auto">
+                  <button onClick={stopCamera} className="p-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white transition-all">
+                    <X className="w-8 h-8" />
+                  </button>
+                  <button
                     onClick={capturePhoto}
                     disabled={uploadingPhoto}
-                    className="rounded-full h-12 px-8 bg-white text-black hover:bg-slate-200"
+                    className="w-24 h-24 rounded-full border-4 border-white flex items-center justify-center bg-transparent hover:bg-white/10 transition-all group"
                   >
-                    {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Camera className="w-5 h-5 mr-2" /> Capture</>}
-                  </Button>
+                    <div className="w-20 h-20 rounded-full bg-red-600 group-hover:scale-90 transition-transform" />
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 w-full max-w-md">
+              <div className="flex flex-col gap-6 w-full max-w-md">
                 <Button
                   onClick={startCamera}
                   disabled={uploadingPhoto}
-                  className="h-16 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold"
+                  className="h-24 rounded-3xl bg-gradient-to-r from-red-600 to-rose-600 hover:scale-[1.02] transition-all text-white text-2xl font-bold shadow-2xl shadow-red-600/30 flex flex-col items-center justify-center gap-2"
                 >
-                  <Camera className="w-6 h-6 mr-3" />
+                  <Camera className="w-8 h-8" />
                   Open Camera
                 </Button>
                 
-                <div className="relative">
+                <div className="relative py-4">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-700"></div>
+                    <div className="w-full border-t border-white/10"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-slate-950 text-slate-500">or</span>
+                    <span className="px-4 bg-black text-slate-500 uppercase tracking-widest font-semibold">Or upload</span>
                   </div>
                 </div>
 
@@ -635,10 +669,10 @@ export default function Kiosk() {
                   onClick={() => document.getElementById('photo-upload').click()}
                   disabled={uploadingPhoto}
                   variant="outline"
-                  className="h-16 rounded-xl border-slate-700 text-white text-lg"
+                  className="h-20 rounded-3xl border-2 border-white/10 bg-white/5 hover:bg-white/10 text-white text-xl"
                 >
                   {uploadingPhoto ? <Loader2 className="w-6 h-6 mr-3 animate-spin" /> : <Upload className="w-6 h-6 mr-3" />}
-                  {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                  {uploadingPhoto ? 'Uploading...' : 'Upload from Device'}
                 </Button>
                 <input id="photo-upload" type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
               </div>
@@ -653,68 +687,63 @@ export default function Kiosk() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full overflow-y-auto hide-scrollbar"
-            data-testid="gallery-step"
+            className="h-full overflow-y-auto hide-scrollbar relative z-10"
           >
-            <div className="max-w-7xl mx-auto p-8 pt-20">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div className="max-w-[1600px] mx-auto p-8 pt-24">
+              <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
                 <div>
-                  <h2 className="text-4xl font-bold text-white">Select a Product</h2>
-                  <p className="text-slate-300 mt-2">Choose one item to visualize</p>
+                  <h2 className="text-5xl font-bold text-white mb-2">Select Style</h2>
+                  <p className="text-slate-400 text-xl">Choose a product to visualize instantly.</p>
                 </div>
                 
-                <div className="flex gap-3">
-                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="rounded-full h-12 px-6 border-slate-600 bg-slate-800/50 text-white hover:bg-slate-700">
-                    <SlidersHorizontal className="w-5 h-5 mr-2" /> Filters
+                <div className="flex gap-4">
+                  <Button onClick={() => setShowFilters(!showFilters)} variant="outline" className="h-14 px-8 rounded-full border-white/10 bg-white/5 text-white hover:bg-white/10 text-lg">
+                    <SlidersHorizontal className="w-5 h-5 mr-3" /> Filters
                   </Button>
                   
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[180px] h-12 rounded-full border-slate-600 bg-slate-800/50 text-white hover:bg-slate-700">
-                      <ArrowUpDown className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Sort by" />
+                    <SelectTrigger className="w-[200px] h-14 rounded-full border-white/10 bg-white/5 text-white hover:bg-white/10 text-lg">
+                      <SelectValue placeholder="Sort" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                      <SelectItem value="name" className="text-white hover:bg-slate-700">Name</SelectItem>
-                      <SelectItem value="price-low" className="text-white hover:bg-slate-700">Price: Low to High</SelectItem>
-                      <SelectItem value="price-high" className="text-white hover:bg-slate-700">Price: High to Low</SelectItem>
+                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="price-low">Price: Low to High</SelectItem>
+                      <SelectItem value="price-high">Price: High to Low</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {/* Filters */}
+              {/* Filters Panel */}
               <AnimatePresence>
                 {showFilters && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700 p-6 mb-8 overflow-hidden"
+                    className="bg-zinc-900/80 backdrop-blur-xl rounded-3xl border border-white/10 p-8 mb-10 overflow-hidden"
                   >
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold text-white">Filters</h3>
-                      <Button onClick={resetFilters} variant="ghost" className="text-sm text-slate-300 hover:text-white">Reset All</Button>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-2 gap-10">
                       <div>
-                        <Label className="text-sm text-slate-300 mb-4 block">
-                          Price: ₹{priceRange[0].toLocaleString('en-IN')} - ₹{priceRange[1].toLocaleString('en-IN')}
+                        <Label className="text-slate-400 mb-6 block text-lg">
+                          Price Range: ₹{priceRange[0].toLocaleString()} - ₹{priceRange[1].toLocaleString()}
                         </Label>
-                        <Slider min={0} max={maxPrice} step={100} value={priceRange} onValueChange={setPriceRange} />
+                        <Slider 
+                          min={0} max={maxPrice} step={100} value={priceRange} onValueChange={setPriceRange} 
+                          className="py-4"
+                        />
                       </div>
-                      
                       <div>
-                        <Label className="text-sm text-slate-300 mb-4 block">Categories</Label>
-                        <div className="flex flex-wrap gap-2">
+                        <Label className="text-slate-400 mb-4 block text-lg">Categories</Label>
+                        <div className="flex flex-wrap gap-3">
                           {getAllCategories().map(cat => (
                             <button
                               key={cat}
-                              onClick={() => setSelectedCategories(prev => 
-                                prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-                              )}
-                              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                selectedCategories.includes(cat) ? 'bg-violet-600 text-white' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                              onClick={() => setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])}
+                              className={`px-6 py-3 rounded-full text-base font-medium transition-all ${
+                                selectedCategories.includes(cat) 
+                                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' 
+                                  : 'bg-white/5 text-slate-300 hover:bg-white/10'
                               }`}
                             >
                               {cat}
@@ -728,48 +757,56 @@ export default function Kiosk() {
               </AnimatePresence>
 
               {/* Products Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-32">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 mb-40">
                 {filteredInventory.map((product) => (
                   <motion.div
                     key={product.id}
                     onClick={() => setSelectedProduct(product)}
-                    whileHover={{ y: -4 }}
+                    whileHover={{ y: -8 }}
                     whileTap={{ scale: 0.98 }}
-                    className={`relative cursor-pointer rounded-2xl overflow-hidden bg-slate-800/80 backdrop-blur-sm border-2 transition-all ${
+                    className={`relative cursor-pointer rounded-[2rem] overflow-hidden bg-zinc-900/50 border-2 transition-all duration-300 ${
                       selectedProduct?.id === product.id 
-                        ? 'border-violet-500 ring-4 ring-violet-500/30 shadow-xl shadow-violet-500/20' 
-                        : 'border-slate-700 hover:border-slate-600 hover:shadow-lg'
+                        ? 'border-red-500 shadow-[0_0_30px_rgba(220,38,38,0.3)] scale-[1.02]' 
+                        : 'border-white/5 hover:border-white/20 hover:shadow-2xl'
                     }`}
                   >
-                    <div className="aspect-square bg-white/5 flex items-center justify-center">
+                    <div className="aspect-[4/5] relative p-6 flex items-center justify-center bg-gradient-to-b from-white/5 to-transparent">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain p-4" />
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-contain drop-shadow-xl" />
                       ) : (
-                        <Eye className="w-16 h-16 text-slate-600" />
+                        <Eye className="w-20 h-20 text-white/10" />
+                      )}
+                      
+                      {selectedProduct?.id === product.id && (
+                        <div className="absolute top-4 right-4 w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
+                          <Check className="w-7 h-7 text-white" strokeWidth={3} />
+                        </div>
                       )}
                     </div>
-                    {selectedProduct?.id === product.id && (
-                      <div className="absolute top-4 right-4 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg">
-                        <Check className="w-6 h-6 text-white" />
+                    
+                    <div className="p-6 bg-zinc-950/80 backdrop-blur-sm absolute bottom-0 inset-x-0 border-t border-white/5">
+                      <h3 className="font-bold text-white text-lg truncate mb-1">{product.name}</h3>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm">{product.category}</span>
+                        <span className="text-red-400 font-bold text-xl">₹{product.price?.toLocaleString()}</span>
                       </div>
-                    )}
-                    <div className="p-4 bg-slate-900/50">
-                      <h3 className="font-semibold text-white truncate">{product.name}</h3>
-                      <p className="text-sm text-slate-300 mb-2">{product.category}</p>
-                      <p className="text-lg font-bold text-violet-400">₹{product.price?.toLocaleString('en-IN')}</p>
                     </div>
                   </motion.div>
                 ))}
               </div>
 
-              {/* Floating Action Button */}
-              <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+              {/* Floating Magic Button */}
+              <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-6">
                 <Button
                   onClick={handleVisualize}
                   disabled={!selectedProduct}
-                  className="h-16 px-12 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-lg font-semibold shadow-2xl shadow-violet-500/30"
+                  className={`w-full h-20 rounded-full text-2xl font-bold transition-all shadow-2xl ${
+                    selectedProduct 
+                      ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:scale-105 shadow-red-600/40' 
+                      : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  }`}
                 >
-                  <Sparkles className="w-5 h-5 mr-2" />
+                  <Sparkles className={`w-8 h-8 mr-3 ${selectedProduct ? 'animate-pulse' : ''}`} />
                   Visualize Now
                 </Button>
               </div>
@@ -777,257 +814,99 @@ export default function Kiosk() {
           </motion.div>
         )}
 
-        {/* STEP 4: Visualizing */}
+        {/* STEP 4: Visualizing (Loading) */}
         {step === 'visualize' && (
           <motion.div
             key="visualize"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex items-center justify-center"
+            className="h-full flex flex-col items-center justify-center relative z-20"
           >
-            <div className="text-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="w-24 h-24 rounded-full border-4 border-violet-500/30 border-t-violet-500 mx-auto mb-8"
-              />
-              <h2 className="text-4xl font-bold text-white mb-4">Creating Your Visualization</h2>
-              <p className="text-slate-300 text-lg">AI is working its magic...</p>
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500/20 blur-[100px] rounded-full" />
+              <div className="relative z-10 flex flex-col items-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  className="w-32 h-32 rounded-full border-4 border-white/10 border-t-red-500 mb-8"
+                />
+                <h2 className="text-5xl font-bold text-white mb-4 tracking-tight">Processing Magic</h2>
+                <p className="text-slate-400 text-xl animate-pulse">Analyzing fabric physics...</p>
+              </div>
             </div>
           </motion.div>
         )}
 
-        {/* Empty State */}
-        {step === 'gallery' && filteredInventory.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center py-20 text-slate-400">
-              <Eye className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-              <p className="text-xl">No products available</p>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 5: Results - Futuristic Mirror */}
+        {/* STEP 5: Results - Magic Mirror */}
         {step === 'results' && result && (
           <motion.div
             key="results"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full p-8 pt-20 overflow-y-auto hide-scrollbar"
+            className="h-full flex flex-col relative z-10"
           >
-            <div className="max-w-6xl mx-auto">
-              {/* Header */}
-              <motion.div 
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-center mb-8"
-              >
-                <h2 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-fuchsia-400 to-purple-400 mb-3">
-                  Your Virtual Try-On
-                </h2>
-                <p className="text-slate-300 text-lg">See yourself in {result.product.name}</p>
-              </motion.div>
+            {/* Header Overlay */}
+            <div className="absolute top-0 left-0 right-0 p-8 z-30 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent">
+              <div>
+                <h2 className="text-4xl font-bold text-white mb-1">Your Look</h2>
+                <p className="text-slate-300">{result.product.name}</p>
+              </div>
+              <div className="flex gap-3">
+                <Button onClick={handleRestart} variant="secondary" className="rounded-full h-12 px-6 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md">
+                  Try Another
+                </Button>
+                <Button onClick={() => window.open(generateWhatsAppLink(), '_blank')} className="rounded-full h-12 px-6 bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-500/20">
+                  <Share2 className="w-5 h-5 mr-2" /> Share
+                </Button>
+              </div>
+            </div>
 
-              {/* Futuristic Mirror Display */}
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3, type: "spring" }}
-                className="relative mb-8"
-              >
-                {/* Show both images side by side - SAME HEIGHT */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Left: Original Customer Photo */}
-                  <div className="relative">
-                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-[2rem] blur-xl opacity-20" />
-                    <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2rem] p-4 border-2 border-blue-400/30 shadow-xl">
-                      <div className="text-center mb-3">
-                        <p className="text-blue-300 font-semibold text-sm">Original Photo</p>
-                      </div>
-                      <div className="relative bg-black/50 rounded-2xl overflow-hidden border border-blue-400/20">
-                        {/* Fixed aspect ratio for consistency */}
-                        <div className="aspect-[9/14]">
-                          <img 
-                            src={result.customer_photo} 
-                            alt="Your Photo" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            {/* Split Screen View */}
+            <div className="flex-1 grid md:grid-cols-2 h-full">
+              {/* Original */}
+              <div className="relative h-full border-r border-white/10 bg-black">
+                <img src={result.customer_photo} className="w-full h-full object-cover opacity-60" />
+                <div className="absolute bottom-8 left-8 bg-black/60 backdrop-blur px-4 py-2 rounded-lg border border-white/10">
+                  <span className="text-slate-300 font-mono text-sm">ORIGINAL_INPUT</span>
+                </div>
+              </div>
 
-                  {/* Right: AI Visualization Mirror - SAME HEIGHT */}
-                  <div className="relative">
-                    {/* Outer Glow Effect */}
-                    <div className="absolute -inset-4 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-purple-600 rounded-[3rem] blur-2xl opacity-30 animate-pulse" />
+              {/* AI Result */}
+              <div className="relative h-full bg-black">
+                {result.ai_image ? (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    transition={{ duration: 1 }} 
+                    className="w-full h-full relative"
+                  >
+                    <img src={result.ai_image} className="w-full h-full object-cover" />
                     
-                    {/* Mirror Frame */}
-                    <div className="relative bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-[2.5rem] p-4 border-4 border-violet-500/30 shadow-2xl">
-                      {/* Corner Decorations */}
-                      <div className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 border-violet-400 rounded-tl-xl" />
-                      <div className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 border-fuchsia-400 rounded-tr-xl" />
-                      <div className="absolute bottom-3 left-3 w-8 h-8 border-b-4 border-l-4 border-purple-400 rounded-bl-xl" />
-                      <div className="absolute bottom-3 right-3 w-8 h-8 border-b-4 border-r-4 border-violet-400 rounded-br-xl" />
-
-                      {/* Scanning Lines Effect */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/10 to-transparent rounded-[2rem]"
-                        animate={{ y: ['-100%', '200%'] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                      />
-
-                      <div className="text-center mb-3">
-                        <p className="text-violet-300 font-semibold text-sm">
-                          {result.preview_mode ? 'Preview Mode' : 'AI Visualization'}
-                        </p>
+                    {/* Holographic Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-red-900/10 via-transparent to-transparent pointer-events-none" />
+                    
+                    {/* Status Badge */}
+                    <div className="absolute bottom-8 right-8 flex flex-col items-end gap-2">
+                      <div className="bg-red-600/90 backdrop-blur px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 border border-red-500/50">
+                        <span className="text-white font-bold tracking-widest text-sm flex items-center gap-2">
+                          <Zap className="w-4 h-4 fill-white" /> AI ENHANCED
+                        </span>
                       </div>
-
-                      {/* Main Mirror Display - PURE IMAGE */}
-                      <div className="relative bg-black/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-violet-400/20">
-                        {/* Status Badge - Moved to top */}
-                        {result.ai_image && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.5, type: "spring" }}
-                            className={`absolute top-3 left-3 z-20 px-2 py-1 rounded-full flex items-center gap-1.5 shadow-lg text-xs ${
-                              result.preview_mode 
-                                ? 'bg-gradient-to-r from-orange-500 to-amber-500' 
-                                : 'bg-gradient-to-r from-emerald-500 to-green-500'
-                            }`}
-                          >
-                            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                            <span className="text-white font-semibold">
-                              {result.preview_mode ? 'Preview' : 'AI'}
-                            </span>
-                          </motion.div>
-                        )}
-
-                        {/* Mirror Reflection - PURE IMAGE ONLY */}
-                        <div className="aspect-[9/14]">
-                          {result.ai_image ? (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 1.05 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.8 }}
-                              className="relative w-full h-full"
-                            >
-                              {/* Holographic Effect Overlay */}
-                              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-fuchsia-500/5 pointer-events-none z-10" />
-                              
-                              {/* The Visualization Result - PURE IMAGE */}
-                              <img 
-                                src={result.ai_image} 
-                                alt="Your Visualization" 
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  console.error('Image failed to load:', result.ai_image);
-                                  e.target.src = result.product.image_url;
-                                }}
-                              />
-                              
-                              {/* Shimmer Effect */}
-                              <motion.div
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
-                                animate={{ x: ['-100%', '200%'] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "linear", delay: 1 }}
-                              />
-
-                              {/* Grid Overlay for Tech Feel */}
-                              <div className="absolute inset-0 opacity-5 pointer-events-none" 
-                                   style={{
-                                     backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(139, 92, 246, .3) 25%, rgba(139, 92, 246, .3) 26%, transparent 27%, transparent 74%, rgba(139, 92, 246, .3) 75%, rgba(139, 92, 246, .3) 76%, transparent 77%, transparent)',
-                                     backgroundSize: '50px 50px'
-                                   }}
-                              />
-                            </motion.div>
-                          ) : result.status === 'processing' ? (
-                            // Show loading animation while AI is processing
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900">
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                className="w-16 h-16 rounded-full border-4 border-violet-500/30 border-t-violet-500 mb-4"
-                              />
-                              <p className="text-violet-300 text-base font-semibold mb-1">AI Processing...</p>
-                              <p className="text-slate-400 text-xs">Creating visualization</p>
-                            </div>
-                          ) : (
-                            // Fallback: Show product if AI failed
-                            <div className="w-full h-full flex items-center justify-center bg-slate-900 p-4">
-                              <img 
-                                src={result.product.image_url} 
-                                alt="Product" 
-                                className="max-w-full max-h-full object-contain"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      {result.preview_mode && (
+                        <span className="text-xs text-amber-400 bg-black/50 px-2 py-1 rounded">Preview Mode</span>
+                      )}
                     </div>
+                  </motion.div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center flex-col p-10 text-center">
+                    <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
+                    <h3 className="text-2xl font-bold text-white mb-2">Generation Failed</h3>
+                    <p className="text-slate-400">{result.error || "Could not generate visualization."}</p>
                   </div>
-                </div>
-
-                {/* Product Info Below - Separate from images */}
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="mt-6 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-violet-300 text-sm mb-1">Product</p>
-                      <p className="text-white text-xl font-bold">{result.product.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-violet-300 text-sm mb-1">Price</p>
-                      <p className="text-white text-xl font-bold">₹{result.product.price?.toLocaleString('en-IN')}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-violet-300 text-sm mb-1">Category</p>
-                      <p className="text-white font-semibold">{result.product.category}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </motion.div>
-
-              {/* Action Buttons */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="bg-slate-800/50 backdrop-blur-sm rounded-3xl border border-slate-700 p-8"
-              >
-                <div className="flex flex-col items-center gap-6">
-                  {/* QR Code */}
-                  <div className="bg-white p-6 rounded-2xl shadow-xl">
-                    <QRCodeSVG value={generateWhatsAppLink()} size={140} />
-                  </div>
-                  <p className="text-slate-300 text-center">Scan to share your virtual try-on via WhatsApp</p>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4 w-full max-w-2xl">
-                    <Button
-                      onClick={() => window.open(generateWhatsAppLink(), '_blank')}
-                      className="flex-1 h-16 px-8 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-lg font-semibold shadow-lg shadow-green-500/30"
-                    >
-                      <Share2 className="w-6 h-6 mr-3" /> Share to WhatsApp
-                    </Button>
-                    <Button 
-                      onClick={handleRestart} 
-                      variant="outline" 
-                      className="flex-1 h-16 px-8 rounded-2xl border-2 border-violet-500 bg-slate-800/50 text-white text-lg font-semibold hover:bg-violet-600 hover:border-violet-400 transition-all"
-                    >
-                      <Sparkles className="w-6 h-6 mr-3" /> Try Another Item
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -1035,27 +914,24 @@ export default function Kiosk() {
 
       {/* PIN Dialog */}
       <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Enter Admin PIN</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold">Admin Access</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              type="password"
-              maxLength="4"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              placeholder="Enter 4-digit PIN"
-              className="h-14 rounded-xl bg-slate-800 border-slate-700 text-center text-2xl tracking-widest text-white"
-            />
-            <div className="flex gap-4">
-              <Button onClick={() => { setShowPinDialog(false); setPin(''); }} variant="outline" className="flex-1 h-12 rounded-xl border-slate-700 text-white">
-                Cancel
-              </Button>
-              <Button onClick={handlePinVerify} disabled={pin.length !== 4} className="flex-1 h-12 rounded-xl bg-violet-600 text-white">
-                Verify
-              </Button>
+          <div className="space-y-6 py-4">
+            <div className="flex justify-center">
+              <Input
+                type="password"
+                maxLength="4"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                className="w-40 h-16 text-center text-4xl tracking-[0.5em] bg-black border-zinc-800 text-red-500 focus:border-red-500 rounded-xl"
+                autoFocus
+              />
             </div>
+            <Button onClick={handlePinVerify} disabled={pin.length !== 4} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold">
+              Unlock Dashboard
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
