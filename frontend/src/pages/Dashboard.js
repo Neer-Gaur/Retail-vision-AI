@@ -228,7 +228,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-72 border-r border-white/5 bg-black/50 backdrop-blur-xl p-6 hidden md:flex flex-col z-10">
         <div className="flex items-center gap-3 mb-10 px-2">
-          <img src="/assets/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+          <img src="/assets/logo.png" alt="Logo" className="w-full h-full object-cover" />
           <div>
             <h1 className="font-bold text-lg tracking-tight">RetailVision<span className="text-red-500">.</span></h1>
             <p className="text-xs text-slate-500">Store Dashboard</p>
@@ -661,7 +661,7 @@ export default function Dashboard() {
                 <Select value={formData.category} onValueChange={v => setFormData({...formData, category: v})}>
                   <SelectTrigger className="bg-slate-950 border-slate-800 text-white"><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                    {(shop?.industry === 'fashion' ? FASHION_CATEGORIES : TILE_CATEGORIES).map(c => (
+                    {(((shop?.industry || '').toLowerCase().includes('tile')) ? TILE_CATEGORIES : FASHION_CATEGORIES).map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>

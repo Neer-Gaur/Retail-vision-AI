@@ -37,7 +37,23 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      const { user, shop } = await signIn(email, password);
+
+      const allowlisted = (process.env.REACT_APP_ALLOWED_EMAILS || '')
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean)
+        .includes(String(user?.email || '').toLowerCase());
+
+      const status = String(shop?.subscription_status || '').toLowerCase();
+      const hasPlan = status === 'active' || status === 'starter' || status === 'pro' || status === 'super';
+
+      if (!allowlisted && !hasPlan) {
+        toast.error('Please select a plan to continue');
+        navigate('/pricing');
+        return;
+      }
+
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
@@ -90,8 +106,8 @@ export default function Login() {
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -top-8 left-1/2 -translate-x-1/2"
             >
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-500/30 border border-white/10">
-                <Scan className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-500/30 border border-white/10 overflow-hidden">
+                <img src="/assets/logo.png" alt="RetailVision" className="w-full h-full object-cover" />
               </div>
             </motion.div>
 

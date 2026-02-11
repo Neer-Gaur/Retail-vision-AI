@@ -12,6 +12,8 @@ import google.generativeai as genai
 import io
 from PIL import Image
 
+GOOGLE_GENAI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+
 ROOT_DIR = Path(__file__).parent
 # Load environment variables
 load_dotenv(ROOT_DIR / '.env')
@@ -52,7 +54,11 @@ class VisualizationResponse(BaseModel):
 
 async def download_image_as_base64(url: str) -> str:
     """Download image from URL and convert to base64"""
-    async with httpx.AsyncClient() as client:
+    headers = {
+        "User-Agent": "RetailVisionAI/1.0 (+https://retailvision.in)",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    }
+    async with httpx.AsyncClient(follow_redirects=True, headers=headers) as client:
         response = await client.get(url, timeout=30.0)
         response.raise_for_status()
         return base64.b64encode(response.content).decode('utf-8')
@@ -63,56 +69,112 @@ async def generate_visualization(
     product_name: str,
     industry: str
 ) -> VisualizationResult:
-    """Generate AI visualization using Google Gemini"""
-    try:
-        # Get API key
-        api_key = os.getenv('GOOGLE_API_KEY')
-        
-        if not api_key or "your-google-api-key" in api_key.lower():
-            return VisualizationResult(
-                product_name=product_name,
-                status="failed",
-                error="No Google API Key configured. Please set GOOGLE_API_KEY in backend/.env"
-            )
-        
-        genai.configure(api_key=api_key)
-        
-        # Build the prompt
-        if industry == 'fashion':
-            prompt = f"You are a fashion stylist AI. Look at the person in the first image and the {product_name} in the second image. Describe how the person would look wearing this product. Note: This model cannot generate new images yet, returning description."
-        else:
-            prompt = f"You are an interior design AI. Look at the room in the first image and the {product_name} in the second image. Describe how the room would look with this product installed. Note: This model cannot generate new images yet, returning description."
+    """Generate an output image using Google AI Studio (Gemini image model).
 
-        # Load images
-        customer_img = Image.open(io.BytesIO(base64.b64decode(customer_photo_base64)))
-        product_img = Image.open(io.BytesIO(base64.b64decode(product_image_base64)))
-        
-        # Use Gemini 1.5 Flash (efficient multimodal)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        response = model.generate_content([prompt, customer_img, product_img])
-        text_response = response.text
-        
-        # NOTE: Standard Gemini API returns text, not images. 
-        # For a real implementation of Virtual Try-On, you'd need a specialized image generation model (like Imagen 2/3 on Vertex AI)
-        # or a diff-rendering pipeline.
-        # For now, we return the ORIGINAL customer image as the 'result' so the UI doesn't break, 
-        # but we attach the AI's description.
-        
-        return VisualizationResult(
-            product_name=product_name,
-            result_image=f"data:image/jpeg;base64,{customer_photo_base64}", # Fallback to original
-            status="success",
-            model="Google Gemini 1.5 Flash (Description Only)",
-            description=text_response
-        )
-            
-    except Exception as e:
+    We call the Generative Language REST API directly because different Python SDK versions
+    can behave inconsistently with image models.
+
+    Expected behavior:
+    - Send 2 images + a prompt
+    - Receive an edited/generated image as inlineData
+
+    If the model returns no image, we return FAILED (no more "input image" fallback).
+    """
+
+    api_key = os.getenv('GOOGLE_API_KEY')
+    if not api_key or "your-google-api-key" in api_key.lower():
         return VisualizationResult(
             product_name=product_name,
             status="failed",
-            error=str(e)
+            error="No Google API Key configured. Please set GOOGLE_API_KEY in backend/.env"
         )
+
+    model_id = os.getenv('GEMINI_IMAGE_MODEL') or "gemini-3-pro-image-preview"
+
+    if industry == 'fashion':
+        prompt = (
+            "Apply the clothes/garment from the PRODUCT image onto the PERSON in the CUSTOMER photo. "
+            f"Product name: {product_name}. "
+            "Keep the customer's face, identity, pose, body shape and background unchanged. "
+            "Photorealistic saree drape, correct scale and lighting. Output ONE final image. No text."
+        )
+    else:
+        prompt = (
+            "Apply the tile/material pattern from the PRODUCT image into the ROOM image. "
+            f"Product name: {product_name}. "
+            "Keep perspective/layout/lighting consistent. Output ONE final image. No text."
+        )
+
+    def as_part_image(b64: str, mime: str = "image/jpeg"):
+        return {"inlineData": {"mimeType": mime, "data": b64}}
+
+    # Some APIs want model names prefixed with "models/"
+    candidate_model_names = [
+        model_id,
+        f"models/{model_id}" if not str(model_id).startswith("models/") else model_id,
+    ]
+
+    last_error = None
+
+    async with httpx.AsyncClient(timeout=90.0) as client:
+        for m in candidate_model_names:
+            try:
+                url = f"{GOOGLE_GENAI_BASE}/models/{m.split('models/')[-1]}:generateContent?key={api_key}"
+
+                body = {
+                    "contents": [
+                        {
+                            "role": "user",
+                            "parts": [
+                                {"text": prompt},
+                                as_part_image(customer_photo_base64),
+                                as_part_image(product_image_base64),
+                            ],
+                        }
+                    ],
+                    # If supported by the image model, this nudges it to return an image.
+                    "generationConfig": {
+                        "temperature": 0.2,
+                        "responseModalities": ["IMAGE", "TEXT"],
+                    },
+                }
+
+                resp = await client.post(url, json=body)
+                data = resp.json()
+
+                if resp.status_code >= 400:
+                    last_error = data.get("error", {}).get("message") or str(data)
+                    continue
+
+                # Parse inline image
+                candidates = data.get("candidates", [])
+                for c in candidates:
+                    content = c.get("content", {})
+                    for p in content.get("parts", []) or []:
+                        inline = p.get("inlineData")
+                        if inline and inline.get("data"):
+                            mime = inline.get("mimeType") or "image/png"
+                            b64 = inline.get("data")
+                            return VisualizationResult(
+                                product_name=product_name,
+                                result_image=f"data:{mime};base64,{b64}",
+                                status="success",
+                                model=f"Google AI Studio ({model_id})",
+                                description=None,
+                            )
+
+                # no image
+                last_error = "Model returned no image. Check model id/access and whether it supports image output for this prompt."
+
+            except Exception as e:
+                last_error = str(e)
+                continue
+
+    return VisualizationResult(
+        product_name=product_name,
+        status="failed",
+        error=last_error or "Unknown error"
+    )
 
 # ============ Endpoints ============
 

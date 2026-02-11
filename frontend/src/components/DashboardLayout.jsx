@@ -1,9 +1,8 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { 
-  LayoutDashboard, Package, BarChart3, Users, CreditCard, 
-  Monitor, LogOut, Sparkles, Crown
+  LayoutDashboard, Package, BarChart3, Users, CreditCard,
+  Monitor, LogOut, Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../store/authStore';
@@ -26,27 +25,36 @@ export default function DashboardLayout() {
   };
 
   const subscriptionColors = {
-    trial: 'bg-amber-100 text-amber-700 border-amber-200',
-    active: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    expired: 'bg-red-100 text-red-700 border-red-200'
+    trial: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+    active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+    expired: 'bg-red-500/10 text-red-400 border-red-500/30'
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50">
+    <div className="min-h-screen bg-black text-white selection:bg-red-500/30">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-900/10 rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-rose-900/10 rounded-full blur-[150px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+      </div>
+
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 z-40 shadow-sm">
+      <aside className="fixed left-0 top-0 h-full w-64 bg-black/50 backdrop-blur-xl border-r border-white/5 z-40">
         {/* Logo & Shop Info */}
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
-              <Sparkles className="w-6 h-6 text-white" />
+        <div className="p-6 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-500/20 border border-white/10 overflow-hidden">
+              <img src="/assets/logo.png" alt="RetailVision" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-slate-900 truncate">{shop?.shop_name || 'My Shop'}</h1>
+              <h1 className="font-bold text-white truncate">{shop?.shop_name || 'My Shop'}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${subscriptionColors[shop?.subscription_status] || subscriptionColors.trial}`}>
                   <Crown className="w-3 h-3" />
-                  {shop?.subscription_status?.charAt(0).toUpperCase() + shop?.subscription_status?.slice(1) || 'Trial'}
+                  {shop?.subscription_status
+                    ? shop.subscription_status.charAt(0).toUpperCase() + shop.subscription_status.slice(1)
+                    : 'Trial'}
                 </span>
               </div>
             </div>
@@ -61,10 +69,10 @@ export default function DashboardLayout() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all border ${
                   isActive
-                    ? 'bg-violet-100 text-violet-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-red-600/20 to-rose-600/20 text-red-300 border-red-500/30'
+                    : 'border-transparent text-slate-400 hover:bg-white/5 hover:text-white'
                 }`
               }
             >
@@ -75,10 +83,10 @@ export default function DashboardLayout() {
         </nav>
 
         {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-100 bg-white">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-black/40">
           <Button
             onClick={() => navigate('/kiosk')}
-            className="w-full mb-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-200"
+            className="w-full mb-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20 border border-white/5"
           >
             <Monitor className="w-4 h-4 mr-2" />
             Launch Kiosk
@@ -86,7 +94,7 @@ export default function DashboardLayout() {
           <Button
             onClick={handleLogout}
             variant="ghost"
-            className="w-full rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            className="w-full rounded-xl text-slate-400 hover:text-white hover:bg-white/5"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -95,7 +103,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="ml-64 min-h-screen">
+      <main className="ml-64 min-h-screen relative z-10">
         <Outlet />
       </main>
     </div>

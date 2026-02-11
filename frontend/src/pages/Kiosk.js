@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, X, Check, Loader2, Share2, Upload, 
   SlidersHorizontal, ArrowUpDown, Sparkles, Eye, LogOut,
-  Zap, Scan, Monitor, Maximize2
+  Zap, Scan, Monitor, Maximize2, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,20 +50,107 @@ export default function Kiosk() {
   const [sortBy, setSortBy] = useState('name');
   const [maxPrice, setMaxPrice] = useState(100000);
 
+  // Analytics logging
+  const DEVICE_ID = 'kiosk-1';
+  const [sessionId, setSessionId] = useState(null);
+
   useEffect(() => {
     document.documentElement.requestFullscreen?.();
+
     if (shop?.id) {
       loadInventory();
+      // Session starts when lead form is submitted (not on page load)
     }
-    
+
     return () => {
       stopCamera();
+      // Do not auto-end sessions on unmount; session ends only on Exit Session
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shop?.id]);
 
   useEffect(() => {
     applyFiltersAndSort();
   }, [inventory, priceRange, selectedTags, selectedCategories, sortBy]);
+
+  const createKioskSession = async (lead_id = null) => {
+    try {
+      if (!shop?.id) return null;
+      if (sessionId) return sessionId;
+
+      const row = {
+        shop_id: shop.id,
+        device_id: DEVICE_ID,
+        started_at: new Date().toISOString()
+      };
+      if (lead_id) row.lead_id = lead_id;
+
+      const { data, error } = await supabase
+        .from('kiosk_sessions')
+        .insert([row])
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      const id = data?.id || null;
+      setSessionId(id);
+      return id;
+    } catch (e) {
+      // Don't block kiosk UX if logging fails
+      console.warn('kiosk_sessions insert failed:', e);
+      return null;
+    }
+  };
+
+  const endKioskSession = async () => {
+    try {
+      if (!shop?.id || !sessionId) return;
+
+      await supabase
+        .from('kiosk_sessions')
+        .update({ ended_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .eq('shop_id', shop.id);
+
+      await logKioskEvent('session_end');
+    } catch (e) {
+      console.warn('kiosk_sessions end failed:', e);
+    }
+  };
+
+  const logKioskEvent = async (event_type, meta = {}) => {
+    try {
+      if (!shop?.id) return;
+
+      // Session is required (DB has session_id NOT NULL). If session hasn't started yet, don't log.
+      const sid = sessionId;
+      if (!sid) return;
+
+      // meta column is NOT NULL in DB → always send an object
+      const safeMeta = meta && typeof meta === 'object' ? meta : {};
+
+      const payload = {
+        shop_id: shop.id,
+        device_id: DEVICE_ID,
+        session_id: sid,
+        lead_id: leadId,
+        product_id: selectedProduct?.id || null,
+        event_type,
+        meta: safeMeta
+      };
+
+      // Remove null/undefined keys to avoid schema mismatch (but keep session_id + meta)
+      Object.keys(payload).forEach((k) => {
+        if (k === 'session_id' || k === 'meta') return;
+        if (payload[k] === null || payload[k] === undefined) delete payload[k];
+      });
+
+      const { error } = await supabase.from('kiosk_events').insert([payload]);
+      if (error) throw error;
+    } catch (e) {
+      console.warn('kiosk_events insert failed:', e);
+    }
+  };
 
   const loadInventory = async () => {
     try {
@@ -178,6 +265,7 @@ export default function Kiosk() {
     try {
       const uploadedUrl = await uploadBase64Image(dataUrl, 'customer-uploads');
       setCustomerPhotoUrl(uploadedUrl);
+      await logKioskEvent('photo_uploaded', { source: 'camera' });
       setStep('gallery');
       toast.success('Photo captured! Select a product to try');
     } catch (error) {
@@ -198,6 +286,7 @@ export default function Kiosk() {
       try {
         const uploadedUrl = await uploadBase64Image(reader.result, 'customer-uploads');
         setCustomerPhotoUrl(uploadedUrl);
+        await logKioskEvent('photo_uploaded', { source: 'upload' });
         setStep('gallery');
         toast.success('Photo uploaded! Select a product to try');
       } catch (error) {
@@ -237,6 +326,31 @@ export default function Kiosk() {
       
       if (error) throw error;
       setLeadId(data.id);
+
+      // Start session NOW (on lead submit)
+      const sid = await createKioskSession(data.id);
+      if (sid) {
+        // First events of the session
+        await supabase.from('kiosk_events').insert([
+          {
+            shop_id: shop.id,
+            device_id: DEVICE_ID,
+            session_id: sid,
+            lead_id: data.id,
+            event_type: 'session_start',
+            meta: {}
+          },
+          {
+            shop_id: shop.id,
+            device_id: DEVICE_ID,
+            session_id: sid,
+            lead_id: data.id,
+            event_type: 'lead_submitted',
+            meta: { whatsapp_digits: phoneDigits }
+          }
+        ]);
+      }
+
       setStep('camera');
       toast.success('Welcome! Let\'s capture your photo');
     } catch (error) {
@@ -295,6 +409,8 @@ export default function Kiosk() {
       return;
     }
 
+    await logKioskEvent('visualize_clicked');
+
     setVisualizing(true);
     setStep('visualize');
 
@@ -312,14 +428,15 @@ export default function Kiosk() {
       setVisualizing(false);
       setStep('results');
 
-      // Try AI first, fallback to client-side preview
+      // Try AI first. Preview fallback is disabled by default (real try-on only).
+      const ENABLE_PREVIEW_FALLBACK = String(process.env.REACT_APP_ENABLE_PREVIEW_FALLBACK || '').toLowerCase() === 'true';
       let visualizedImageUrl = null;
       let usePreviewMode = false;
 
       try {
         toast.info('Sending images to AI...');
         
-        const BACKEND_URL = 'http://localhost:8001';
+        const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
         const response = await fetch(`${BACKEND_URL}/api/visualize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -327,7 +444,7 @@ export default function Kiosk() {
             customer_photo_url: customerPhotoUrl,
             product_image_urls: [selectedProduct.image_url],
             product_names: [selectedProduct.name],
-            industry: shop?.industry || 'fashion'
+            industry: shop?.industry || 'Fashion'
           })
         });
 
@@ -343,6 +460,7 @@ export default function Kiosk() {
               visualizedImageUrl = await uploadBase64Image(aiResult.result_image, 'visualized_uploads');
               console.log('Visualization saved to:', visualizedImageUrl);
               toast.success('AI Visualization created!');
+              await logKioskEvent('visualize_success', { mode: 'ai' });
             } catch (uploadError) {
               console.error('Failed to upload visualization result:', uploadError);
               visualizedImageUrl = aiResult.result_image;
@@ -354,22 +472,42 @@ export default function Kiosk() {
           throw new Error('API request failed');
         }
       } catch (aiError) {
-        console.log('AI failed, using preview mode:', aiError.message);
+        const msg = aiError?.message || String(aiError);
+        console.log('AI failed:', msg);
+
+        // If Google AI Studio returns "no image", we should NOT fake it with preview.
+        // We want the real try-on output only.
+        const noImage = /no image/i.test(msg);
+        if (noImage) {
+          toast.error('Google AI returned no image. Please try again.');
+          throw aiError;
+        }
+
+        if (!ENABLE_PREVIEW_FALLBACK) {
+          // Do not fake results. Surface the real failure so we can fix the AI pipeline.
+          toast.error('AI visualization failed. Please try again.');
+          throw aiError;
+        }
+
         toast.info('AI unavailable - Generating preview...');
-        
-        // Generate client-side preview
+
+        // Optional preview fallback (explicitly enabled only)
         try {
-          const previewImage = await generateClientSidePreview(
-            customerPhotoUrl,
-            selectedProduct.image_url
-          );
+          const previewImage = await generateClientSidePreview(customerPhotoUrl, selectedProduct.image_url);
           visualizedImageUrl = previewImage;
           usePreviewMode = true;
           toast.success('Preview generated!');
+          await logKioskEvent('visualize_success', { mode: 'preview' });
         } catch (previewError) {
           console.error('Preview generation failed:', previewError);
-          toast.warning('Using product preview');
+          throw previewError;
         }
+      }
+
+      // No safety-net fallback images here.
+      // If AI returned no image and preview fallback is disabled, we should fail clearly.
+      if (!visualizedImageUrl) {
+        throw new Error('AI returned no output image');
       }
 
       // Save visualization record to database
@@ -384,6 +522,7 @@ export default function Kiosk() {
         }]);
 
       // Update result with visualization
+      await logKioskEvent('visualize_rendered', { preview_mode: usePreviewMode });
       setResult({
         product: selectedProduct,
         customer_photo: customerPhotoUrl,
@@ -396,6 +535,7 @@ export default function Kiosk() {
     } catch (error) {
       console.error('Visualization error:', error);
       toast.error('Visualization failed. Please try again.');
+      await logKioskEvent('visualize_failed', { error: error?.message || 'unknown' });
       setResult({
         product: selectedProduct,
         customer_photo: customerPhotoUrl,
@@ -409,16 +549,20 @@ export default function Kiosk() {
     }
   };
 
-  const handleRestart = () => {
+  const handleRestart = async () => {
+    await logKioskEvent('try_another');
     // Go back to gallery to select another product (keep customer photo and lead data)
     setStep('gallery');
     setSelectedProduct(null);
     setResult(null);
   };
 
-  const handleExitSession = () => {
+  const handleExitSession = async () => {
     // Confirm exit
     if (window.confirm('Exit kiosk session? This will clear all data.')) {
+      await logKioskEvent('exit_clicked');
+      await endKioskSession();
+
       // Clear everything and return to lead capture
       setStep('lead');
       setLeadData({ customer_name: '', whatsapp_number: '' });
@@ -428,6 +572,10 @@ export default function Kiosk() {
       setSelectedProduct(null);
       setResult(null);
       resetFilters();
+
+      // ready for next customer
+      setSessionId(null);
+
       toast.info('Session ended. Ready for new customer.');
     }
   };
@@ -468,7 +616,7 @@ export default function Kiosk() {
     return `https://wa.me/${leadData.whatsapp_number?.replace(/\D/g, '')}?text=${message}`;
   };
 
-  const overlayType = shop?.industry === 'fashion' ? 'silhouette' : 'grid';
+  const overlayType = (shop?.industry || '').toLowerCase().includes('tile') ? 'grid' : 'silhouette';
 
   return (
     <div className="h-screen w-full overflow-hidden bg-black text-white relative font-sans selection:bg-red-500/30">
@@ -491,8 +639,8 @@ export default function Kiosk() {
         className="absolute top-8 left-8 z-50 cursor-pointer select-none group"
         data-testid="kiosk-logo"
       >
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-[0_0_20px_rgba(220,38,38,0.4)] group-hover:scale-105 transition-transform">
-          <Scan className="w-8 h-8 text-white" />
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-[0_0_20px_rgba(220,38,38,0.4)] group-hover:scale-105 transition-transform border border-white/10 overflow-hidden">
+          <img src="/assets/logo.png" alt="RetailVision" className="w-full h-full object-cover" />
         </div>
         {longPressDuration > 0 && (
           <div className="absolute -bottom-4 left-0 w-14 h-1 bg-white/20 rounded-full overflow-hidden">
@@ -510,7 +658,7 @@ export default function Kiosk() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           onClick={handleExitSession}
-          className="absolute top-8 right-8 z-50 px-6 py-3 rounded-full bg-red-600/10 hover:bg-red-600 border border-red-500/30 flex items-center gap-3 backdrop-blur-md transition-all group"
+          className="absolute top-8 right-8 z-[60] px-6 py-3 rounded-full bg-red-600/10 hover:bg-red-600 border border-red-500/30 flex items-center gap-3 backdrop-blur-md transition-all group"
         >
           <LogOut className="w-5 h-5 text-red-400 group-hover:text-white" />
           <span className="text-red-400 font-semibold group-hover:text-white">Exit Session</span>
@@ -600,9 +748,9 @@ export default function Kiosk() {
             >
               <h2 className="text-5xl font-bold text-white mb-4">Capture Your Look</h2>
               <p className="text-xl text-slate-400">
-                {shop?.industry === 'fashion' 
-                  ? 'Stand in front of the mirror for a perfect fit.'
-                  : 'Capture the room to visualize new tiles.'}
+                {(shop?.industry || '').toLowerCase().includes('tile')
+                  ? 'Capture the room to visualize new tiles.'
+                  : 'Stand in front of the mirror for a perfect fit.'}
               </p>
             </motion.div>
 
@@ -761,7 +909,10 @@ export default function Kiosk() {
                 {filteredInventory.map((product) => (
                   <motion.div
                     key={product.id}
-                    onClick={() => setSelectedProduct(product)}
+                    onClick={async () => {
+                      setSelectedProduct(product);
+                      await logKioskEvent('product_selected', { product_id: product.id });
+                    }}
                     whileHover={{ y: -8 }}
                     whileTap={{ scale: 0.98 }}
                     className={`relative cursor-pointer rounded-[2rem] overflow-hidden bg-zinc-900/50 border-2 transition-all duration-300 ${
@@ -838,74 +989,143 @@ export default function Kiosk() {
           </motion.div>
         )}
 
-        {/* STEP 5: Results - Magic Mirror */}
+        {/* STEP 5: Results - Premium Compare View */}
         {step === 'results' && result && (
           <motion.div
             key="results"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex flex-col relative z-10"
+            className="h-full flex flex-col relative z-10 overflow-y-auto"
           >
-            {/* Header Overlay */}
-            <div className="absolute top-0 left-0 right-0 p-8 z-30 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent">
-              <div>
-                <h2 className="text-4xl font-bold text-white mb-1">Your Look</h2>
-                <p className="text-slate-300">{result.product.name}</p>
-              </div>
-              <div className="flex gap-3">
-                <Button onClick={handleRestart} variant="secondary" className="rounded-full h-12 px-6 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md">
-                  Try Another
-                </Button>
-                <Button onClick={() => window.open(generateWhatsAppLink(), '_blank')} className="rounded-full h-12 px-6 bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-500/20">
-                  <Share2 className="w-5 h-5 mr-2" /> Share
-                </Button>
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-black/70 backdrop-blur-xl border-b border-white/5">
+              <div className="px-6 md:px-10 py-5 pl-24 md:pl-28 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white truncate">{result.product?.name || 'Visualization'}</h2>
+                  <div className="mt-1 flex items-center gap-2 text-sm">
+                    <span className="text-slate-400">Compare</span>
+                    {result.preview_mode ? (
+                      <span className="px-2 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">Preview</span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-500/30">AI</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {/* Actions moved to bottom bar to avoid overlapping the fixed Exit Session button */}
+                </div>
               </div>
             </div>
 
-            {/* Split Screen View */}
-            <div className="flex-1 grid md:grid-cols-2 h-full">
-              {/* Original */}
-              <div className="relative h-full border-r border-white/10 bg-black">
-                <img src={result.customer_photo} className="w-full h-full object-cover opacity-60" />
-                <div className="absolute bottom-8 left-8 bg-black/60 backdrop-blur px-4 py-2 rounded-lg border border-white/10">
-                  <span className="text-slate-300 font-mono text-sm">ORIGINAL_INPUT</span>
-                </div>
-              </div>
-
-              {/* AI Result */}
-              <div className="relative h-full bg-black">
-                {result.ai_image ? (
-                  <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    transition={{ duration: 1 }} 
-                    className="w-full h-full relative"
-                  >
-                    <img src={result.ai_image} className="w-full h-full object-cover" />
-                    
-                    {/* Holographic Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-red-900/10 via-transparent to-transparent pointer-events-none" />
-                    
-                    {/* Status Badge */}
-                    <div className="absolute bottom-8 right-8 flex flex-col items-end gap-2">
-                      <div className="bg-red-600/90 backdrop-blur px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 border border-red-500/50">
-                        <span className="text-white font-bold tracking-widest text-sm flex items-center gap-2">
-                          <Zap className="w-4 h-4 fill-white" /> AI ENHANCED
-                        </span>
+            {/* Content */}
+            <div className="flex-1 p-6 md:p-10 pb-40 md:pb-44">
+              <div className="max-w-6xl mx-auto">
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {/* Original Frame */}
+                  <div className="relative">
+                    <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-sky-500/40 via-white/10 to-transparent blur-sm opacity-70" />
+                    <div className="relative rounded-3xl bg-slate-900/45 backdrop-blur-xl border border-white/10 overflow-hidden">
+                      <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-slate-200">Original</div>
+                        <div className="text-xs font-mono text-slate-500">INPUT</div>
                       </div>
-                      {result.preview_mode && (
-                        <span className="text-xs text-amber-400 bg-black/50 px-2 py-1 rounded">Preview Mode</span>
-                      )}
+                      <div className="p-4">
+                        <div className="aspect-[3/4] rounded-2xl bg-black/40 border border-white/10 overflow-hidden flex items-center justify-center">
+                          <img
+                            src={result.customer_photo}
+                            alt="Original"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </motion.div>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center flex-col p-10 text-center">
-                    <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
-                    <h3 className="text-2xl font-bold text-white mb-2">Generation Failed</h3>
-                    <p className="text-slate-400">{result.error || "Could not generate visualization."}</p>
                   </div>
-                )}
+
+                  {/* Visualized Frame */}
+                  <div className="relative">
+                    <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-red-500/50 via-rose-500/20 to-transparent blur-sm opacity-80" />
+                    <div className="relative rounded-3xl bg-slate-900/45 backdrop-blur-xl border border-white/10 overflow-hidden">
+                      <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                        <div className="text-sm font-semibold text-slate-200">Visualized</div>
+                        <div className="flex items-center gap-2">
+                          {result.status === 'processing' ? (
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-500/10 text-amber-200 border border-amber-500/30">GENERATING</span>
+                          ) : result.ai_image ? (
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-200 border border-emerald-500/30">READY</span>
+                          ) : (
+                            <span className="text-xs font-semibold px-2 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-500/30">FAILED</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        {result.status === 'processing' ? (
+                          <div className="aspect-[3/4] rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center flex-col p-8 text-center">
+                            <div className="w-12 h-12 border-2 border-white/10 border-t-amber-400 rounded-full animate-spin mb-5" />
+                            <div className="text-xl font-bold text-white">Wearing your saree…</div>
+                            <div className="text-sm text-slate-400 mt-2">Wait a few seconds. We’re generating your try-on.</div>
+                          </div>
+                        ) : result.ai_image ? (
+                          <div className="aspect-[3/4] rounded-2xl bg-black/40 border border-white/10 overflow-hidden flex items-center justify-center relative">
+                            <img
+                              src={result.ai_image}
+                              alt="Visualized"
+                              className="w-full h-full object-contain"
+                            />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-red-900/10 via-transparent to-transparent" />
+                          </div>
+                        ) : (
+                          <div className="aspect-[3/4] rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center flex-col p-8 text-center">
+                            <AlertTriangle className="w-14 h-14 text-red-400 mb-4" />
+                            <div className="text-lg font-bold text-white">Couldn’t generate</div>
+                            <div className="text-sm text-slate-400 mt-2">{result.error || 'Please try again or choose another product.'}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="px-5 pb-5">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <div className="text-sm text-slate-300 font-semibold">{result.product?.category || 'Category'}</div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <div className="text-slate-400 text-sm">Price</div>
+                            <div className="text-white font-bold">₹{result.product?.price?.toLocaleString?.('en-IN') ?? result.product?.price ?? ''}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom helper */}
+                <div className="mt-6 text-center text-sm text-slate-500">
+                  Tip: Use “Try Another” to keep the same photo and compare different products.
+                </div>
+
+                {/* Bottom Action Bar */}
+                <div className="fixed bottom-0 left-0 right-0 z-40">
+                  <div className="bg-black/75 backdrop-blur-xl border-t border-white/5">
+                    <div className="max-w-6xl mx-auto px-6 md:px-10 py-4 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                      <Button
+                        onClick={handleRestart}
+                        variant="outline"
+                        className="h-12 rounded-full border-white/10 text-slate-200 hover:bg-white/5"
+                      >
+                        Try Another
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          await logKioskEvent('share_clicked');
+                          window.open(generateWhatsAppLink(), '_blank');
+                        }}
+                        className="h-12 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30"
+                      >
+                        <Share2 className="w-5 h-5 mr-2" /> Share
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>

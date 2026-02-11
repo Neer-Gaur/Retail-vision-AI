@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Package, Plus, Edit2, Trash2, Upload, X, Loader2, 
+import {
+  Package, Plus, Edit2, Trash2, Upload, X, Loader2,
   Search, PackageOpen, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,12 @@ import { useNavigate } from 'react-router-dom';
 const FASHION_CATEGORIES = ['Saree', 'Suit', 'Lehenga', 'Jeans', 'Top', 'Dress', 'Kurti', 'Shirt', 'Blazer', 'Other'];
 const TILE_CATEGORIES = ['Floor Tiles', 'Wall Tiles', 'Bathroom Tiles', 'Kitchen Tiles', 'Outdoor Tiles', 'Mosaic', 'Marble', 'Granite', 'Other'];
 
-const TRIAL_LIMIT = 3;
+const PLAN_LIMITS = {
+  trial: 3,
+  starter: 50,
+  pro: 200,
+  super: 999999
+};
 
 export default function Inventory() {
   const navigate = useNavigate();
@@ -28,19 +33,18 @@ export default function Inventory() {
   const [editingItem, setEditingItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '', category: '', price: '', stock_count: '', tags: '', image_url: ''
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Debug: log shop data
-  console.log('Shop data:', shop);
-  console.log('Industry:', shop?.industry);
-
-  const categories = shop?.industry === 'fashion' ? FASHION_CATEGORIES : TILE_CATEGORIES;
-  const isTrialLimitReached = shop?.subscription_status === 'trial' && inventory.length >= TRIAL_LIMIT;
+  const isTiles = (shop?.industry || '').toLowerCase().includes('tile');
+  const categories = isTiles ? TILE_CATEGORIES : FASHION_CATEGORIES;
+  const planKey = String(shop?.subscription_status || 'trial').toLowerCase();
+  const planLimit = PLAN_LIMITS[planKey] ?? PLAN_LIMITS.trial;
+  const isPlanLimitReached = inventory.length >= planLimit;
 
   useEffect(() => {
     const initializeInventory = async () => {
@@ -52,11 +56,11 @@ export default function Inventory() {
       }
     };
     initializeInventory();
-  }, [shop?.id, refreshShop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop?.id]);
 
   const loadInventory = async () => {
     if (!shop?.id) {
-      console.log('No shop ID for inventory');
       setLoading(false);
       return;
     }
@@ -68,7 +72,7 @@ export default function Inventory() {
         .select('*')
         .eq('shop_id', shop.id)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Inventory load error:', error);
         toast.error('Failed to load inventory: ' + error.message);
@@ -101,8 +105,8 @@ export default function Inventory() {
   };
 
   const openAddDialog = () => {
-    if (isTrialLimitReached) {
-      toast.error('Trial limit reached! Upgrade to add more products.');
+    if (isPlanLimitReached) {
+      toast.error(`Inventory limit reached (${planLimit} items). Upgrade your plan to add more.`);
       navigate('/dashboard/subscription');
       return;
     }
@@ -115,8 +119,8 @@ export default function Inventory() {
     setFormData({
       name: item.name,
       category: item.category,
-      price: item.price.toString(),
-      stock_count: item.stock_count.toString(),
+      price: item.price?.toString?.() ?? String(item.price ?? ''),
+      stock_count: item.stock_count?.toString?.() ?? String(item.stock_count ?? ''),
       tags: item.tags?.join(', ') || '',
       image_url: item.image_url || ''
     });
@@ -126,8 +130,7 @@ export default function Inventory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validation
+
     if (!formData.name.trim()) {
       toast.error('Product name is required');
       return;
@@ -144,7 +147,6 @@ export default function Inventory() {
       toast.error('Stock cannot be negative');
       return;
     }
-    // Ensure image exists for new items
     if (!editingItem && !imageFile && !formData.image_url) {
       toast.error('Product image is required');
       return;
@@ -171,11 +173,11 @@ export default function Inventory() {
       if (editingItem) {
         const { error } = await supabase.from('inventory').update(itemData).eq('id', editingItem.id);
         if (error) throw error;
-        toast.success('Item updated!');
+        toast.success('Item updated');
       } else {
         const { error } = await supabase.from('inventory').insert([itemData]);
         if (error) throw error;
-        toast.success('Item added!');
+        toast.success('Item added');
       }
 
       setShowAddDialog(false);
@@ -200,7 +202,7 @@ export default function Inventory() {
     }
   };
 
-  const filteredInventory = inventory.filter(item => 
+  const filteredInventory = inventory.filter(item =>
     item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -208,54 +210,66 @@ export default function Inventory() {
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Inventory</h1>
-          <p className="text-slate-500 mt-1">Manage your products and stock levels</p>
+          <h1 className="text-3xl font-bold text-white">Inventory</h1>
+          <p className="text-slate-400 mt-1">Manage your products and stock levels</p>
         </div>
-        <Button onClick={openAddDialog} className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-200">
+        <Button
+          onClick={openAddDialog}
+          className="rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20 border border-white/5"
+        >
           <Plus className="w-4 h-4 mr-2" /> Add Product
         </Button>
       </div>
 
-      {/* Trial Limit Warning */}
-      {shop?.subscription_status === 'trial' && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600" />
+      {/* Plan Limit Warning */}
+      {(planKey === 'trial' || planKey === 'starter') && (
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-400" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800">
-              Trial Mode: {inventory.length}/{TRIAL_LIMIT} products used
-            </p>
-            <p className="text-xs text-amber-600">Upgrade to add unlimited products</p>
+            <p className="text-sm font-medium text-amber-200">{planKey === 'trial' ? 'Trial Mode' : 'Starter Plan'}: {inventory.length}/{planLimit} inventory items used</p>
+            <p className="text-xs text-amber-300/70">Upgrade your plan to increase your inventory limit.</p>
           </div>
-          <Button size="sm" onClick={() => navigate('/dashboard/subscription')} className="rounded-full bg-amber-600 hover:bg-amber-700 text-white">
-            Upgrade Now
+          <Button
+            size="sm"
+            onClick={() => navigate('/dashboard/subscription')}
+            className="rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30"
+          >
+            Upgrade
           </Button>
         </div>
       )}
 
       {/* Search */}
-      <div className="relative w-80 mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+      <div className="relative w-full md:w-96 mb-6 group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-red-300 transition-colors" />
         <Input
           placeholder="Search products..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-12 h-12 rounded-xl border-slate-200"
+          className="pl-12 h-12 rounded-xl bg-slate-900/50 border-slate-700 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
         />
       </div>
 
       {/* Products Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="w-8 h-8 animate-spin text-red-400" />
         </div>
       ) : filteredInventory.length === 0 ? (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-          <PackageOpen className="w-20 h-20 text-slate-300 mx-auto mb-6" />
-          <h3 className="text-2xl font-bold text-slate-900 mb-2">No Products Yet</h3>
-          <p className="text-slate-500 mb-8 max-w-md mx-auto">Add your first product to start selling</p>
-          <Button onClick={openAddDialog} className="rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-20 bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed"
+        >
+          <PackageOpen className="w-20 h-20 text-slate-600 mx-auto mb-6" />
+          <h3 className="text-2xl font-bold text-white mb-2">No Products Yet</h3>
+          <p className="text-slate-400 mb-8 max-w-md mx-auto">Add your first product to start showcasing.</p>
+          <Button
+            onClick={openAddDialog}
+            className="rounded-xl bg-red-600 hover:bg-red-700 text-white border border-white/5"
+          >
             <Plus className="w-4 h-4 mr-2" /> Add First Product
           </Button>
         </motion.div>
@@ -266,35 +280,48 @@ export default function Inventory() {
               key={item.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden group hover:border-violet-300 hover:shadow-lg transition-all"
+              className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl overflow-hidden group hover:border-red-500/40 hover:shadow-xl hover:shadow-red-500/5 transition-all"
             >
-              <div className="aspect-square bg-slate-50 flex items-center justify-center relative">
+              <div className="aspect-square bg-black/30 flex items-center justify-center relative overflow-hidden">
                 {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} className="max-w-full max-h-full object-contain p-4" />
+                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 ) : (
-                  <Package className="w-16 h-16 text-slate-300" />
+                  <Package className="w-16 h-16 text-slate-600" />
                 )}
-                <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold ${
-                  item.stock_count > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+
+                <div className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold border ${
+                  item.stock_count > 0
+                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                    : 'bg-red-500/10 text-red-300 border-red-500/30'
                 }`}>
                   {item.stock_count > 0 ? `${item.stock_count} in stock` : 'Out of stock'}
                 </div>
+
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                  <button onClick={() => openEditDialog(item)} className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-violet-50 text-violet-600">
+                  <button
+                    onClick={() => openEditDialog(item)}
+                    className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/15 text-white"
+                    title="Edit"
+                  >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-red-50 text-red-600">
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="w-9 h-9 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center hover:bg-red-500/30 text-red-200"
+                    title="Delete"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
+
               <div className="p-4">
-                <h3 className="font-semibold text-slate-900 mb-1 truncate">{item.name}</h3>
-                <p className="text-sm text-slate-500 mb-2">{item.category}</p>
+                <h3 className="font-semibold text-white mb-1 truncate">{item.name}</h3>
+                <p className="text-sm text-slate-400 mb-2">{item.category}</p>
                 <div className="flex items-center justify-between">
-                  <p className="text-lg font-bold text-violet-600">₹{item.price?.toLocaleString('en-IN')}</p>
+                  <p className="text-lg font-bold text-red-300">₹{item.price?.toLocaleString?.('en-IN') ?? item.price}</p>
                   {item.tags?.length > 0 && (
-                    <span className="text-xs bg-violet-50 text-violet-600 px-2 py-1 rounded-full">{item.tags[0]}</span>
+                    <span className="text-xs bg-white/5 text-slate-300 px-2 py-1 rounded-full border border-white/5">{item.tags[0]}</span>
                   )}
                 </div>
               </div>
@@ -305,55 +332,121 @@ export default function Inventory() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={(open) => { if (!open) resetForm(); setShowAddDialog(open); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">{editingItem ? 'Edit Product' : 'Add Product'}</DialogTitle>
           </DialogHeader>
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <Label className="text-sm font-medium mb-2 block">Product Photo</Label>
-              <div onClick={() => document.getElementById('img-upload').click()} className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-violet-400 transition-colors">
+              <Label className="text-sm font-medium text-slate-300 mb-2 block">Product Photo</Label>
+              <div
+                onClick={() => document.getElementById('img-upload').click()}
+                className="border-2 border-dashed border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-red-500/60 hover:bg-white/5 transition-colors"
+              >
                 {imagePreview ? (
                   <div className="relative">
-                    <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded-lg object-contain" />
-                    <button type="button" onClick={(e) => { e.stopPropagation(); setImageFile(null); setImagePreview(null); setFormData({ ...formData, image_url: '' }); }} className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white">
+                    <img src={imagePreview} alt="Preview" className="max-h-48 mx-auto rounded-xl object-contain" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setFormData({ ...formData, image_url: '' });
+                      }}
+                      className="absolute top-2 right-2 w-9 h-9 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center text-white"
+                      title="Remove"
+                    >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <><Upload className="w-12 h-12 text-slate-400 mx-auto mb-2" /><p className="text-slate-500">Click to upload</p></>
+                  <>
+                    <Upload className="w-12 h-12 text-slate-500 mx-auto mb-2" />
+                    <p className="text-slate-400">Click to upload</p>
+                  </>
                 )}
               </div>
               <input id="img-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             </div>
+
             <div>
-              <Label className="text-sm font-medium mb-2 block">Name</Label>
-              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="h-12 rounded-xl" placeholder="Product name" />
+              <Label className="text-sm font-medium text-slate-300 mb-2 block">Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                className="h-12 rounded-xl bg-slate-950 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
+                placeholder="Product name"
+              />
             </div>
+
             <div className="relative z-[300]">
-              <Label className="text-sm font-medium mb-2 block">Category</Label>
+              <Label className="text-sm font-medium text-slate-300 mb-2 block">Category</Label>
               <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
-                <SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent className="z-[300]">{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="h-12 rounded-xl bg-slate-950 border-slate-800 text-white">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-800 text-white z-[300]">
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c} className="focus:bg-white/10">{c}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium mb-2 block">Price (₹)</Label>
-                <Input type="number" min="0" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required className="h-12 rounded-xl" placeholder="0" />
+                <Label className="text-sm font-medium text-slate-300 mb-2 block">Price (₹)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  required
+                  className="h-12 rounded-xl bg-slate-950 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
+                  placeholder="0"
+                />
               </div>
               <div>
-                <Label className="text-sm font-medium mb-2 block">Stock</Label>
-                <Input type="number" min="0" value={formData.stock_count} onChange={(e) => setFormData({ ...formData, stock_count: e.target.value })} required className="h-12 rounded-xl" placeholder="0" />
+                <Label className="text-sm font-medium text-slate-300 mb-2 block">Stock</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.stock_count}
+                  onChange={(e) => setFormData({ ...formData, stock_count: e.target.value })}
+                  required
+                  className="h-12 rounded-xl bg-slate-950 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
+                  placeholder="0"
+                />
               </div>
             </div>
+
             <div>
-              <Label className="text-sm font-medium mb-2 block">Tags (comma separated)</Label>
-              <Input value={formData.tags} onChange={(e) => setFormData({ ...formData, tags: e.target.value })} className="h-12 rounded-xl" placeholder="silk, wedding, premium" />
+              <Label className="text-sm font-medium text-slate-300 mb-2 block">Tags (comma separated)</Label>
+              <Input
+                value={formData.tags}
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                className="h-12 rounded-xl bg-slate-950 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-500 focus:ring-red-500/20"
+                placeholder="silk, wedding, premium"
+              />
             </div>
+
             <div className="flex gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1 h-12 rounded-xl">Cancel</Button>
-              <Button type="submit" disabled={submitting} className="flex-1 h-12 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowAddDialog(false)}
+                className="flex-1 h-12 rounded-xl border-white/10 text-slate-200 hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white border border-white/5"
+              >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : editingItem ? 'Update' : 'Add Product'}
               </Button>
             </div>

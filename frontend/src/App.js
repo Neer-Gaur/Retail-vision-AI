@@ -6,6 +6,11 @@ import { useAuthStore } from './store/authStore';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Pricing from './pages/Pricing';
+import PaymentPending from './pages/PaymentPending';
+import About from './pages/About';
+import Mission from './pages/Mission';
+import Contact from './pages/Contact';
 import DashboardHome from './pages/DashboardHome';
 import Inventory from './pages/Inventory';
 import Analytics from './pages/Analytics';
@@ -13,21 +18,25 @@ import Leads from './pages/Leads';
 import Subscription from './pages/Subscription';
 import Kiosk from './pages/Kiosk';
 import DashboardLayout from './components/DashboardLayout';
+import { hasPaidAccess } from './lib/access';
 
 const queryClient = new QueryClient();
 
 function PrivateRoute({ children }) {
-  const { user, loading } = useAuthStore();
+  const { user, shop, loading } = useAuthStore();
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="w-10 h-10 border-2 border-white/10 border-t-red-400 rounded-full animate-spin" />
       </div>
     );
   }
   
-  return user ? children : <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
+
+  // Require paid access (or allowlist) for app areas.
+  return hasPaidAccess({ user, shop }) ? children : <Navigate to="/pricing" />;
 }
 
 function App() {
@@ -44,6 +53,11 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/payment" element={<PaymentPending />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/mission" element={<Mission />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/kiosk" element={<PrivateRoute><Kiosk /></PrivateRoute>} />
           
           {/* Dashboard Routes with Layout */}

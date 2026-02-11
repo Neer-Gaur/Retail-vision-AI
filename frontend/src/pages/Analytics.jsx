@@ -1,311 +1,426 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Eye, Users, TrendingUp, Clock, Target, BarChart3,
-  ArrowUpRight, ArrowDownRight, Package, Calendar
+import {
+  Activity,
+  BarChart3,
+  Clock,
+  Eye,
+  Flame,
+  Layers,
+  Target,
+  TrendingUp,
+  Users
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
-import { 
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
+
+const RANGE = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90
+};
+
+const COLORS = {
+  red: '#ef4444',
+  blue: '#3b82f6',
+  amber: '#f59e0b',
+  emerald: '#10b981',
+  violet: '#a855f7'
+};
+
+function startOfDaysAgo(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - (days - 1));
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
 
 export default function Analytics() {
   const { shop, refreshShop } = useAuthStore();
   const [loading, setLoading] = useState(true);
+
+  const [timeRange, setTimeRange] = useState('7d');
+
   const [inventory, setInventory] = useState([]);
   const [leads, setLeads] = useState([]);
   const [visualizations, setVisualizations] = useState([]);
-  const [timeRange, setTimeRange] = useState('7d');
+  const [sessions, setSessions] = useState([]);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    const initializeAnalytics = async () => {
-      if (!shop) {
-        await refreshShop();
-      }
-      if (shop?.id) {
-        await loadData();
-      }
+    const run = async () => {
+      if (!shop) await refreshShop();
+      if (shop?.id) await loadAll();
     };
-    initializeAnalytics();
-  }, [shop?.id, refreshShop]);
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop?.id, timeRange]);
 
-  const loadData = async () => {
-    if (!shop?.id) {
-      console.log('No shop ID for analytics');
-      setLoading(false);
-      return;
-    }
+  const loadAll = async () => {
+    if (!shop?.id) return;
 
     setLoading(true);
     try {
-      const [invRes, leadRes, vizRes] = await Promise.all([
+      const days = RANGE[timeRange] || 7;
+      const since = startOfDaysAgo(days);
+
+      const [invRes, leadsRes, vizRes, sesRes, evRes] = await Promise.all([
         supabase.from('inventory').select('*').eq('shop_id', shop.id),
-        supabase.from('leads').select('*').eq('shop_id', shop.id),
-        supabase.from('visualizations').select('*, inventory(name, price)').eq('shop_id', shop.id)
+        supabase.from('leads').select('*').eq('shop_id', shop.id).gte('created_at', since).order('created_at', { ascending: false }).limit(2000),
+        supabase.from('visualizations').select('*').eq('shop_id', shop.id).gte('created_at', since).order('created_at', { ascending: false }).limit(5000),
+        supabase.from('kiosk_sessions').select('*').eq('shop_id', shop.id).gte('started_at', since).order('started_at', { ascending: false }).limit(5000),
+        supabase.from('kiosk_events').select('*').eq('shop_id', shop.id).gte('created_at', since).order('created_at', { ascending: false }).limit(20000)
       ]);
-      
-      if (invRes.error) console.error('Inventory error:', invRes.error);
-      if (leadRes.error) console.error('Leads error:', leadRes.error);
-      if (vizRes.error) console.error('Visualizations error:', vizRes.error);
-      
+
       setInventory(invRes.data || []);
-      setLeads(leadRes.data || []);
+      setLeads(leadsRes.data || []);
       setVisualizations(vizRes.data || []);
-    } catch (error) {
-      console.error('Analytics load error:', error);
+      setSessions(sesRes.data || []);
+      setEvents(evRes.data || []);
+    } catch (e) {
+      console.error('Analytics load error:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate metrics
-  const totalViews = visualizations.length;
-  const totalLeads = leads.length;
-  const conversionRate = totalViews > 0 ? ((totalLeads / totalViews) * 100).toFixed(1) : 0;
-  const avgViewsPerDay = (totalViews / 7).toFixed(1);
+  const derived = useMemo(() => {
+    const days = RANGE[timeRange] || 7;
 
-  // Most viewed products
-  const productViews = {};
-  visualizations.forEach(v => {
-    if (v.product_id) {
-      productViews[v.product_id] = (productViews[v.product_id] || 0) + 1;
-    }
-  });
-  const topProducts = Object.entries(productViews)
-    .map(([id, views]) => {
-      const product = inventory.find(p => p.id === id);
-      return { name: product?.name || 'Unknown', views, price: product?.price || 0 };
-    })
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 5);
+    const totalViews = visualizations.length;
+    const totalLeads = leads.length;
+    const conversionRate = totalViews > 0 ? Math.round((totalLeads / totalViews) * 100) : 0;
 
-  // Daily data
-  const getDailyData = () => {
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-    return [...Array(days)].map((_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - 1 - i));
-      const dateStr = date.toISOString().split('T')[0];
+    // Daily trend
+    const daily = [...Array(days)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (days - 1 - i));
+      const key = d.toISOString().split('T')[0];
+
+      const evDay = events.filter(e => (e.created_at || '').startsWith(key));
+      const aiOk = evDay.filter(e => e.event_type === 'visualize_success' && (e.meta?.mode === 'ai' || e.meta?.mode === undefined)).length;
+      const aiFail = evDay.filter(e => e.event_type === 'visualize_failed').length;
+      const shares = evDay.filter(e => e.event_type === 'share_clicked').length;
+
       return {
-        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        visualizations: visualizations.filter(v => v.created_at?.startsWith(dateStr)).length,
-        leads: leads.filter(l => l.created_at?.startsWith(dateStr)).length
+        day: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        leads: leads.filter(l => (l.created_at || '').startsWith(key)).length,
+        viz: visualizations.filter(v => (v.created_at || '').startsWith(key)).length,
+        sessions: sessions.filter(s => (s.started_at || '').startsWith(key)).length,
+        ai_success: aiOk,
+        ai_failed: aiFail,
+        shares
       };
     });
-  };
 
-  // Hourly distribution
-  const getHourlyData = () => {
-    const hours = Array(24).fill(0);
-    visualizations.forEach(v => {
-      if (v.created_at) {
-        const hour = new Date(v.created_at).getHours();
-        hours[hour]++;
+    // Funnel counts (distinct sessions)
+    const steps = {
+      lead_submitted: new Set(),
+      photo_uploaded: new Set(),
+      product_selected: new Set(),
+      visualize_clicked: new Set(),
+      share_clicked: new Set()
+    };
+    events.forEach(e => {
+      if (steps[e.event_type] && e.session_id) steps[e.event_type].add(e.session_id);
+    });
+    const funnel = [
+      { step: 'Lead', key: 'lead_submitted' },
+      { step: 'Photo', key: 'photo_uploaded' },
+      { step: 'Select', key: 'product_selected' },
+      { step: 'Visualize', key: 'visualize_clicked' },
+      { step: 'Share', key: 'share_clicked' }
+    ].map(s => ({ step: s.step, count: steps[s.key].size }));
+
+    // Peak hours heat (0-23)
+    const hourly = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0 }));
+    const src = sessions.length
+      ? sessions.map(s => s.started_at)
+      : visualizations.map(v => v.created_at);
+    src.forEach(ts => {
+      if (!ts) return;
+      const h = new Date(ts).getHours();
+      hourly[h].count += 1;
+    });
+
+    const peak = [...hourly].sort((a, b) => b.count - a.count)[0];
+
+    // Top products by interest (events)
+    const interest = new Map();
+    events.forEach(e => {
+      const pid = e.product_id || e.meta?.product_id;
+      if (!pid) return;
+      if (e.event_type === 'product_selected' || e.event_type === 'visualize_clicked' || e.event_type === 'share_clicked') {
+        interest.set(pid, (interest.get(pid) || 0) + (e.event_type === 'share_clicked' ? 3 : e.event_type === 'visualize_clicked' ? 2 : 1));
       }
     });
-    return hours.map((count, hour) => ({
-      hour: `${hour}:00`,
-      count
-    }));
-  };
+    const topProducts = Array.from(interest.entries())
+      .map(([product_id, score]) => {
+        const p = inventory.find(x => x.id === product_id);
+        return { product_id, name: p?.name || 'Unknown', category: p?.category || '—', score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
 
-  // Category distribution
-  const getCategoryData = () => {
-    const cats = {};
-    visualizations.forEach(v => {
-      const product = inventory.find(p => p.id === v.product_id);
-      if (product?.category) {
-        cats[product.category] = (cats[product.category] || 0) + 1;
-      }
-    });
-    return Object.entries(cats).map(([name, value]) => ({ name, value }));
-  };
+    // AI trend for chart
+    const aiTrend = daily.map(d => ({ day: d.day, success: d.ai_success, failed: d.ai_failed }));
 
-  const COLORS = ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe'];
+    const shareRate = totalViews > 0 ? Math.round((events.filter(e => e.event_type === 'share_clicked').length / totalViews) * 100) : 0;
 
-  const StatCard = ({ icon: Icon, label, value, change, color }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm"
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 rounded-xl bg-${color}-100 flex items-center justify-center`}>
-          <Icon className={`w-6 h-6 text-${color}-600`} />
-        </div>
-        {change !== undefined && (
-          <div className={`flex items-center gap-1 text-sm font-medium ${change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-            {change >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-            {Math.abs(change)}%
-          </div>
-        )}
-      </div>
-      <p className="text-sm text-slate-500 mb-1">{label}</p>
-      <p className="text-3xl font-bold text-slate-900">{value}</p>
-    </motion.div>
-  );
+    return {
+      totalViews,
+      totalLeads,
+      conversionRate,
+      shareRate,
+      peakHour: peak ? `${peak.hour}:00` : '—',
+      daily,
+      funnel,
+      hourly,
+      topProducts,
+      aiTrend
+    };
+  }, [events, inventory, leads, sessions, timeRange, visualizations]);
 
-  if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const emptyEvents = events.length === 0;
 
   return (
     <div className="p-8">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Analytics</h1>
-          <p className="text-slate-500 mt-1">Track your store's performance and insights</p>
+          <h1 className="text-3xl font-bold text-white">Analytics</h1>
+          <p className="text-slate-400 mt-1">Drilldowns for funnel, peak hours, and product interest.</p>
         </div>
-        <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
-          {['7d', '30d', '90d'].map((range) => (
+
+        <div className="flex items-center gap-2">
+          {Object.keys(RANGE).map(r => (
             <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                timeRange === range ? 'bg-white text-violet-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              key={r}
+              onClick={() => setTimeRange(r)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+                timeRange === r
+                  ? 'bg-red-600/15 text-red-200 border-red-500/30'
+                  : 'bg-white/5 text-slate-200 border-white/10 hover:bg-white/10'
               }`}
             >
-              {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+              {r.toUpperCase()}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard icon={Eye} label="Total Visualizations" value={totalViews} color="violet" />
-        <StatCard icon={Users} label="Total Leads" value={totalLeads} color="blue" />
-        <StatCard icon={Target} label="Conversion Rate" value={`${conversionRate}%`} color="emerald" />
-        <StatCard icon={TrendingUp} label="Avg. Views/Day" value={avgViewsPerDay} color="amber" />
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-6">
-        {/* Trend Chart */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Performance Trend</h3>
-          <p className="text-sm text-slate-500 mb-6">Visualizations and leads over time</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={getDailyData()}>
-              <defs>
-                <linearGradient id="vizGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="leadGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-              <Area type="monotone" dataKey="visualizations" stroke="#8b5cf6" fill="url(#vizGrad)" strokeWidth={2} name="Visualizations" />
-              <Area type="monotone" dataKey="leads" stroke="#3b82f6" fill="url(#leadGrad)" strokeWidth={2} name="Leads" />
-            </AreaChart>
-          </ResponsiveContainer>
+      {loading ? (
+        <div className="flex items-center justify-center py-24">
+          <div className="w-10 h-10 border-2 border-white/10 border-t-red-400 rounded-full animate-spin" />
         </div>
-
-        {/* Peak Hours */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Peak Usage Hours</h3>
-          <p className="text-sm text-slate-500 mb-6">When customers visit most</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={getHourlyData()}>
-              <XAxis dataKey="hour" stroke="#94a3b8" fontSize={10} tickLine={false} interval={3} />
-              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-              <Bar dataKey="count" fill="#a78bfa" radius={[4, 4, 0, 0]} name="Visits" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Top Products */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Most Viewed Products</h3>
-          <p className="text-sm text-slate-500 mb-6">Products with highest visualization count</p>
-          {topProducts.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <Package className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p>No visualization data yet</p>
+      ) : (
+        <>
+          {/* KPI row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5">
+              <div className="text-xs text-slate-400 font-semibold">Visualizations</div>
+              <div className="mt-1 text-3xl font-bold text-white">{derived.totalViews}</div>
+              <div className="mt-3 flex items-center gap-2 text-slate-400 text-sm"><Eye className="w-4 h-4" /> Total</div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {topProducts.map((product, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600 font-semibold text-sm">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 truncate">{product.name}</p>
-                    <p className="text-sm text-slate-500">₹{product.price?.toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-slate-900">{product.views}</p>
-                    <p className="text-xs text-slate-500">views</p>
-                  </div>
-                  <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"
-                      style={{ width: `${(product.views / (topProducts[0]?.views || 1)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5">
+              <div className="text-xs text-slate-400 font-semibold">Leads</div>
+              <div className="mt-1 text-3xl font-bold text-white">{derived.totalLeads}</div>
+              <div className="mt-3 flex items-center gap-2 text-slate-400 text-sm"><Users className="w-4 h-4" /> Captured</div>
             </div>
-          )}
-        </div>
-
-        {/* Category Distribution */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Category Interest</h3>
-          <p className="text-sm text-slate-500 mb-6">Views by product category</p>
-          {getCategoryData().length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <BarChart3 className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p>No data yet</p>
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5">
+              <div className="text-xs text-slate-400 font-semibold">Conversion</div>
+              <div className="mt-1 text-3xl font-bold text-white">{derived.conversionRate}%</div>
+              <div className="mt-3 flex items-center gap-2 text-slate-400 text-sm"><Target className="w-4 h-4" /> Leads / Viz</div>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={getCategoryData()}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {getCategoryData().map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-          <div className="mt-4 space-y-2">
-            {getCategoryData().slice(0, 4).map((cat, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                <span className="text-slate-600 flex-1 truncate">{cat.name}</span>
-                <span className="font-medium text-slate-900">{cat.value}</span>
-              </div>
-            ))}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5">
+              <div className="text-xs text-slate-400 font-semibold">Peak Hour</div>
+              <div className="mt-1 text-3xl font-bold text-white">{derived.peakHour}</div>
+              <div className="mt-3 flex items-center gap-2 text-slate-400 text-sm"><Flame className="w-4 h-4" /> Highest traffic</div>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* Main grid */}
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Trend */}
+            <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="text-lg font-semibold text-white">Trend</div>
+                  <div className="text-sm text-slate-400">Sessions, leads, visualizations</div>
+                </div>
+                <BarChart3 className="w-5 h-5 text-slate-500" />
+              </div>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={derived.daily}>
+                    <defs>
+                      <linearGradient id="a_viz" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.red} stopOpacity={0.35} />
+                        <stop offset="95%" stopColor={COLORS.red} stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="a_leads" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0b1220', border: '1px solid #334155', borderRadius: 12 }} labelStyle={{ color: '#94a3b8' }} itemStyle={{ color: '#e2e8f0' }} />
+                    <Area type="monotone" dataKey="sessions" stroke={COLORS.violet} fillOpacity={0} strokeWidth={2} name="Sessions" />
+                    <Area type="monotone" dataKey="leads" stroke={COLORS.blue} fill="url(#a_leads)" strokeWidth={2} name="Leads" />
+                    <Area type="monotone" dataKey="viz" stroke={COLORS.red} fill="url(#a_viz)" strokeWidth={2.5} name="Visualizations" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Funnel */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="text-lg font-semibold text-white">Funnel</div>
+                  <div className="text-sm text-slate-400">Distinct sessions per step</div>
+                </div>
+                <Layers className="w-5 h-5 text-slate-500" />
+              </div>
+
+              {emptyEvents ? (
+                <div className="text-sm text-slate-500">Funnel will populate once kiosk event logging is active.</div>
+              ) : (
+                <div className="space-y-3">
+                  {derived.funnel.map((f) => {
+                    const max = Math.max(...derived.funnel.map(x => x.count), 1);
+                    const w = clamp(Math.round((f.count / max) * 100), 6, 100);
+                    return (
+                      <div key={f.step} className="bg-white/5 border border-white/5 rounded-xl p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-slate-200 font-semibold">{f.step}</div>
+                          <div className="text-sm text-white font-bold">{f.count}</div>
+                        </div>
+                        <div className="mt-2 h-2 bg-black/30 rounded-full overflow-hidden border border-white/5">
+                          <div className="h-full bg-gradient-to-r from-red-500 to-rose-500" style={{ width: `${w}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Secondary grid */}
+          <div className="grid lg:grid-cols-3 gap-6 mt-6">
+            {/* Peak hours heatmap */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="text-lg font-semibold text-white">Peak Hours</div>
+                  <div className="text-sm text-slate-400">Traffic by hour</div>
+                </div>
+                <Clock className="w-5 h-5 text-slate-500" />
+              </div>
+
+              {derived.hourly.every(h => h.count === 0) ? (
+                <div className="text-sm text-slate-500">No activity yet in this range.</div>
+              ) : (
+                <div className="grid grid-cols-12 gap-2">
+                  {derived.hourly.map((h) => {
+                    const max = Math.max(...derived.hourly.map(x => x.count), 1);
+                    const intensity = h.count / max;
+                    const bg = `rgba(239,68,68,${0.12 + intensity * 0.55})`;
+                    return (
+                      <div
+                        key={h.hour}
+                        title={`${h.hour}:00 — ${h.count}`}
+                        className="rounded-lg border border-white/10"
+                        style={{ background: bg, height: 28 }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              <div className="mt-3 text-xs text-slate-500">Left→right: 0:00 to 23:00</div>
+            </div>
+
+            {/* Top products by interest */}
+            <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="text-lg font-semibold text-white">Top Products (Interest)</div>
+                  <div className="text-sm text-slate-400">Based on select + visualize + share</div>
+                </div>
+                <Activity className="w-5 h-5 text-slate-500" />
+              </div>
+
+              {emptyEvents ? (
+                <div className="text-sm text-slate-500">This will populate once kiosk event logging is active.</div>
+              ) : derived.topProducts.length === 0 ? (
+                <div className="text-sm text-slate-500">No product events found for this range.</div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {derived.topProducts.map((p) => (
+                    <div key={p.product_id} className="bg-white/5 border border-white/5 rounded-2xl p-4">
+                      <div className="text-white font-semibold truncate">{p.name}</div>
+                      <div className="text-xs text-slate-500 truncate mt-1">{p.category}</div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="text-xs px-2 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-500/30">Score</div>
+                        <div className="text-white font-bold">{p.score}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI success/fail trend */}
+          <div className="mt-6 bg-slate-900/50 border border-slate-800 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-lg font-semibold text-white">AI Success / Fail Trend</div>
+                <div className="text-sm text-slate-400">From kiosk_events visualize_success / visualize_failed</div>
+              </div>
+              <TrendingUp className="w-5 h-5 text-slate-500" />
+            </div>
+
+            {emptyEvents ? (
+              <div className="text-sm text-slate-500">This chart will populate after event logging is wired.</div>
+            ) : (
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={derived.aiTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0b1220', border: '1px solid #334155', borderRadius: 12 }} labelStyle={{ color: '#94a3b8' }} itemStyle={{ color: '#e2e8f0' }} />
+                    <Bar dataKey="success" fill={COLORS.emerald} radius={[6, 6, 0, 0]} name="Success" />
+                    <Bar dataKey="failed" fill={COLORS.red} radius={[6, 6, 0, 0]} name="Failed" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 text-xs text-slate-500">
+            If you don’t see funnel/top-products/AI charts yet, it means kiosk events haven’t been generated in this range.
+          </div>
+        </>
+      )}
     </div>
   );
 }

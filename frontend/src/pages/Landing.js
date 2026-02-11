@@ -81,6 +81,13 @@ export default function Landing() {
             <span className="text-2xl font-bold tracking-tight">RetailVision<span className="text-red-500">.</span></span>
           </div>
 
+          <div className="hidden md:flex items-center gap-6 text-sm text-slate-300">
+            <button onClick={() => navigate('/pricing')} className="hover:text-white transition-colors">Pricing</button>
+            <button onClick={() => navigate('/mission')} className="hover:text-white transition-colors">Mission</button>
+            <button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About</button>
+            <button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button>
+          </div>
+
           <div className="flex gap-4">
             <Button onClick={() => navigate('/login')} variant="ghost" className="text-white hover:bg-white/10 rounded-full hidden sm:flex">
               Login
@@ -123,7 +130,7 @@ export default function Landing() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Button onClick={() => navigate('/signup')} className="h-14 px-8 rounded-full bg-white text-black hover:bg-slate-200 text-lg font-semibold transition-all hover:scale-105 w-full sm:w-auto">
-                Start Free Trial
+                Get Yours
               </Button>
               <Button onClick={() => document.getElementById('demo').scrollIntoView()} variant="outline" className="h-14 px-8 rounded-full border-slate-700 text-white hover:bg-white/10 text-lg w-full sm:w-auto">
                 See it in Action
@@ -366,8 +373,16 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="py-8 text-center text-slate-600 text-sm bg-black border-t border-white/5">
-        <p>© 2026 RetailVision AI. All rights reserved.</p>
+      <footer className="py-10 bg-black border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-slate-500 text-sm">© 2026 RetailVision AI. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-slate-400">
+            <button onClick={() => navigate('/pricing')} className="hover:text-white transition-colors">Pricing</button>
+            <button onClick={() => navigate('/mission')} className="hover:text-white transition-colors">Mission</button>
+            <button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About</button>
+            <button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button>
+          </div>
+        </div>
       </footer>
     </div>
   );
