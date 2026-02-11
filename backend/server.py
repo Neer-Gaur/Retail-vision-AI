@@ -21,9 +21,14 @@ load_dotenv(ROOT_DIR / '.env')
 app = FastAPI(title="RetailVision AI API")
 
 # CORS
+# Render/production: set CORS_ORIGINS="https://retailvision.in,https://www.retailvision.in"
+# Local dev: you can leave it empty to allow all.
+origins_raw = os.getenv("CORS_ORIGINS", "").strip()
+origins = [o.strip() for o in origins_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins if origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
