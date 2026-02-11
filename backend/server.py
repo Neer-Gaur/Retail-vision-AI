@@ -98,16 +98,23 @@ async def generate_visualization(
 
     if industry == 'fashion':
         prompt = (
-            "VIRTUAL TRY-ON TASK.\n"
-            "You are given two images: (1) CUSTOMER photo (a person wearing some clothing) and (2) PRODUCT photo (the target garment).\n\n"
-            "GOAL: Replace the CUSTOMER's current outfit with the PRODUCT garment — not just the fabric/texture.\n"
-            "- Copy the PRODUCT garment's full design and silhouette (neckline, sleeves/straps, bodice shape, length, borders, embroidery placement).\n"
-            "- Remove/override the original garment completely in the edited region. Do NOT keep the old clothing shape.\n"
-            "- Keep the CUSTOMER's face, hair, skin tone, body shape, pose, hands, jewelry and background unchanged.\n"
-            "- Preserve realistic drape and folds consistent with the body pose, with correct scale and lighting.\n"
-            "- Do not add extra garments or change the camera framing.\n"
+            "VIRTUAL TRY-ON (GARMENT TRANSFER)\n\n"
+            "INPUTS: Two images are provided.\n"
+            "1) CUSTOMER image: a real person wearing ANY outfit.\n"
+            "2) PRODUCT image: the target garment. The garment may be photographed alone OR worn by a model/mannequin.\n\n"
+            "TASK: Extract the exact garment from the PRODUCT image and dress the CUSTOMER with that garment.\n"
+            "This is NOT a texture swap. It must be a full garment replacement with correct cut and silhouette.\n\n"
+            "GARMENT EXTRACTION RULES (from PRODUCT image):\n"
+            "- Identify the garment only (ignore the product model/mannequin body, skin, face, hair, background).\n"
+            "- Preserve key design details: color, pattern, embroidery/borders, neckline, sleeves/straps, length, and overall silhouette.\n"
+            "- If the product image shows only part of the garment, infer the missing parts realistically while keeping design consistent.\n\n"
+            "APPLICATION RULES (to CUSTOMER image):\n"
+            "- Replace the CUSTOMER's current clothing in the relevant region completely with the extracted garment.\n"
+            "- Keep CUSTOMER identity unchanged: face, hair, skin tone, body shape, pose, hands, jewelry, and background must remain the same.\n"
+            "- Ensure realistic fit, drape, folds, and lighting/shadows consistent with the CUSTOMER photo.\n"
+            "- Do not change camera angle, framing, or add extra accessories.\n\n"
             f"Product name: {product_name}.\n"
-            "Return ONE photorealistic final image only. No text, no watermark."
+            "OUTPUT: Return exactly ONE photorealistic final image only. No text, no watermark."
         )
     else:
         prompt = (
