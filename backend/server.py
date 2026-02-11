@@ -98,10 +98,16 @@ async def generate_visualization(
 
     if industry == 'fashion':
         prompt = (
-            "Apply the clothes/garment from the PRODUCT image onto the PERSON in the CUSTOMER photo. "
-            f"Product name: {product_name}. "
-            "Keep the customer's face, identity, pose, body shape and background unchanged. "
-            "Photorealistic saree drape, correct scale and lighting. Output ONE final image. No text."
+            "VIRTUAL TRY-ON TASK.\n"
+            "You are given two images: (1) CUSTOMER photo (a person wearing some clothing) and (2) PRODUCT photo (the target garment).\n\n"
+            "GOAL: Replace the CUSTOMER's current outfit with the PRODUCT garment — not just the fabric/texture.\n"
+            "- Copy the PRODUCT garment's full design and silhouette (neckline, sleeves/straps, bodice shape, length, borders, embroidery placement).\n"
+            "- Remove/override the original garment completely in the edited region. Do NOT keep the old clothing shape.\n"
+            "- Keep the CUSTOMER's face, hair, skin tone, body shape, pose, hands, jewelry and background unchanged.\n"
+            "- Preserve realistic drape and folds consistent with the body pose, with correct scale and lighting.\n"
+            "- Do not add extra garments or change the camera framing.\n"
+            f"Product name: {product_name}.\n"
+            "Return ONE photorealistic final image only. No text, no watermark."
         )
     else:
         prompt = (
