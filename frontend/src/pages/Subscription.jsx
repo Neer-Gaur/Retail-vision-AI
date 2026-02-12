@@ -15,32 +15,32 @@ import { useNavigate } from 'react-router-dom';
 
 const PLANS = [
   {
-    id: 'trial',
-    name: 'Trial',
-    price: 0,
-    period: 'forever',
-    description: 'Get started with the essentials',
-    features: ['Up to 3 products', 'Basic analytics', 'Kiosk mode', 'Lead capture'],
-    limitations: ['Limited products', 'No priority support'],
+    id: 'starter',
+    name: 'Starter',
+    price: 2499,
+    period: '+ GST & taxes',
+    description: 'Essential setup for a single showroom to start capturing demand.',
+    features: ['Inventory up to 50 items', 'Kiosk experience (in-store)', 'Lead capture + basic follow-up', 'Email support'],
+    limitations: [],
     popular: false
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: 999,
-    period: 'month',
-    description: 'Premium for growing showrooms',
-    features: ['Unlimited products', 'Advanced analytics', 'Kiosk mode', 'Lead capture', 'Priority support', 'WhatsApp integration', 'Custom branding'],
+    price: 4999,
+    period: '+ GST & taxes',
+    description: 'Built for teams that want visibility, insights, and faster conversions.',
+    features: ['Inventory up to 200 items', 'Owner dashboard access', 'Advanced analytics', 'Lead analysis', 'Priority support'],
     limitations: [],
     popular: true
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 2499,
-    period: 'month',
-    description: 'Scale across multiple kiosks & branches',
-    features: ['Everything in Pro', 'Multiple kiosks', 'API access', 'Dedicated support', 'Custom features', 'White-label option'],
+    id: 'super',
+    name: 'Super',
+    price: 12999,
+    period: '+ GST & taxes',
+    description: 'For growing showrooms—multi-kiosk readiness with maximum throughput.',
+    features: ['Everything in Pro', 'Connect up to 3 kiosks', 'Multi-kiosk analytics view', 'Onboarding assistance'],
     limitations: [],
     popular: false
   }
@@ -54,10 +54,9 @@ export default function Subscription() {
   const [processing, setProcessing] = useState(false);
   const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
 
-  const currentPlan = shop?.subscription_status || 'trial';
+  const currentPlan = String(shop?.subscription_status || 'trial').toLowerCase();
 
   const handleSelectPlan = (plan) => {
-    if (plan.id === 'trial') return;
     setSelectedPlan(plan);
     setShowPaymentDialog(true);
   };
@@ -71,14 +70,14 @@ export default function Subscription() {
 
       const { error } = await supabase
         .from('shops')
-        .update({ subscription_status: 'active' })
+        .update({ subscription_status: selectedPlan?.id || 'pro' })
         .eq('id', shop.id);
 
       if (error) throw error;
 
       await refreshShop();
       setShowPaymentDialog(false);
-      toast.success('Subscription activated. Unlimited access unlocked.');
+      toast.success('Plan updated. Access will reflect immediately.');
       navigate('/dashboard/inventory');
     } catch (error) {
       toast.error('Payment failed. Please try again.');
@@ -113,7 +112,7 @@ export default function Subscription() {
             : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
         }`}>
           <Crown className="w-4 h-4" />
-          Current Plan: {currentPlan === 'active' ? 'Pro' : 'Trial'}
+          Current Plan: {currentPlan ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) : 'Trial'}
         </div>
       </div>
 
@@ -141,8 +140,8 @@ export default function Subscription() {
               <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
               <p className="text-sm text-slate-400 mb-4">{plan.description}</p>
               <div className="flex items-baseline justify-center gap-1">
-                <span className="text-4xl font-bold text-white">₹{plan.price}</span>
-                <span className="text-slate-500">/{plan.period}</span>
+                <span className="text-4xl font-bold text-white">₹{plan.price.toLocaleString('en-IN')}</span>
+                <span className="text-slate-500">{plan.period}</span>
               </div>
             </div>
 
@@ -167,7 +166,7 @@ export default function Subscription() {
 
             <Button
               onClick={() => handleSelectPlan(plan)}
-              disabled={plan.id === 'trial' || (currentPlan === 'active' && plan.id !== 'enterprise')}
+              disabled={currentPlan === plan.id}
               className={`w-full h-12 rounded-xl font-semibold border transition-all ${
                 plan.id === 'trial'
                   ? 'bg-white/5 text-slate-500 border-white/5 cursor-not-allowed'
@@ -176,11 +175,7 @@ export default function Subscription() {
                   : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
               }`}
             >
-              {plan.id === 'trial'
-                ? 'Current Plan'
-                : currentPlan === 'active' && plan.id === 'pro'
-                ? 'Active'
-                : `Get ${plan.name}`}
+              {currentPlan === plan.id ? 'Current Plan' : `Choose ${plan.name}`}
             </Button>
           </motion.div>
         ))}
