@@ -8,6 +8,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Pricing from './pages/Pricing';
 import PaymentPending from './pages/PaymentPending';
+import VirtualTryOnKiosk from './pages/VirtualTryOnKiosk';
+import RetailKioskForShops from './pages/RetailKioskForShops';
+import RetailAnalyticsAI from './pages/RetailAnalyticsAI';
+import AIKiosk from './pages/AIKiosk';
 import About from './pages/About';
 import Mission from './pages/Mission';
 import Contact from './pages/Contact';
@@ -55,6 +59,13 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/payment" element={<PaymentPending />} />
+
+          {/* SEO Landing Pages */}
+          <Route path="/virtual-try-on-kiosk" element={<VirtualTryOnKiosk />} />
+          <Route path="/retail-kiosk-for-shops" element={<RetailKioskForShops />} />
+          <Route path="/retail-analytics-ai" element={<RetailAnalyticsAI />} />
+          <Route path="/ai-kiosk" element={<AIKiosk />} />
+
           <Route path="/about" element={<About />} />
           <Route path="/mission" element={<Mission />} />
           <Route path="/contact" element={<Contact />} />

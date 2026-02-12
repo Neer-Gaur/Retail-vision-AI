@@ -129,11 +129,23 @@ export default function Landing() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button onClick={() => navigate('/signup')} className="h-14 px-8 rounded-full bg-white text-black hover:bg-slate-200 text-lg font-semibold transition-all hover:scale-105 w-full sm:w-auto">
+              <Button onClick={() => navigate('/contact')} className="h-14 px-8 rounded-full bg-white text-black hover:bg-slate-200 text-lg font-semibold transition-all hover:scale-105 w-full sm:w-auto">
                 Get Yours
               </Button>
               <Button onClick={() => document.getElementById('demo').scrollIntoView()} variant="outline" className="h-14 px-8 rounded-full border-slate-700 text-white hover:bg-white/10 text-lg w-full sm:w-auto">
                 See it in Action
+              </Button>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3 justify-center lg:justify-start">
+              <Button onClick={() => navigate('/virtual-try-on-kiosk')} variant="ghost" className="rounded-full text-white hover:bg-white/10">
+                Virtual Try-On Kiosk
+              </Button>
+              <Button onClick={() => navigate('/ai-kiosk')} variant="ghost" className="rounded-full text-white hover:bg-white/10">
+                AI Kiosk
+              </Button>
+              <Button onClick={() => navigate('/retail-analytics-ai')} variant="ghost" className="rounded-full text-white hover:bg-white/10">
+                Retail Analytics
               </Button>
             </div>
           </motion.div>
