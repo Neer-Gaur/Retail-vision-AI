@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Package, BarChart3, Users, CreditCard,
-  Monitor, LogOut, Crown
+  Monitor, LogOut, Crown, Menu, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../store/authStore';
@@ -18,6 +18,7 @@ const navItems = [
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const { shop, signOut } = useAuthStore();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -39,8 +40,49 @@ export default function DashboardLayout() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
       </div>
 
+      {/* Mobile Top Bar */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-black/60 backdrop-blur-xl border-b border-white/5">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-500/20 border border-white/10 overflow-hidden">
+              <img src="/assets/logo.png" alt="RetailVision" className="w-full h-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate">{shop?.shop_name || 'My Shop'}</div>
+              <div className="text-[11px] text-slate-400 truncate">Owner Dashboard</div>
+            </div>
+          </div>
+          <button
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black/70" onClick={() => setMobileOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-black/50 backdrop-blur-xl border-r border-white/5 z-40">
+      <aside
+        className={`fixed left-0 top-0 h-full w-64 bg-black/70 md:bg-black/50 backdrop-blur-xl border-r border-white/5 z-50 transform transition-transform duration-300 md:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Mobile close */}
+        <div className="md:hidden p-4 flex justify-end">
+          <button
+            className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
         {/* Logo & Shop Info */}
         <div className="p-6 border-b border-white/5">
           <div className="flex items-center gap-3">
@@ -68,6 +110,7 @@ export default function DashboardLayout() {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all border ${
                   isActive
@@ -103,7 +146,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="ml-64 min-h-screen relative z-10">
+      <main className="min-h-screen relative z-10 md:ml-64 pt-16 md:pt-0">
         <Outlet />
       </main>
     </div>

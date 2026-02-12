@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Zap, Shield, ArrowRight, ChevronRight, ChevronLeft, Scan, Store, Monitor } from 'lucide-react';
+import { Sparkles, Zap, Shield, ArrowRight, ChevronRight, ChevronLeft, Scan, Store, Monitor, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '../store/authStore';
 
@@ -53,6 +53,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (user) navigate('/dashboard');
@@ -88,7 +89,7 @@ export default function Landing() {
             <button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button onClick={() => navigate('/login')} variant="ghost" className="text-white hover:bg-white/10 rounded-full hidden sm:flex">
               Login
             </Button>
@@ -98,9 +99,102 @@ export default function Landing() {
             >
               Get Started
             </Button>
+
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden inline-flex items-center justify-center w-11 h-11 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Side Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              className="fixed top-0 right-0 z-[70] h-full w-[86%] max-w-sm bg-black border-l border-white/10 shadow-2xl"
+            >
+              <div className="p-5 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 border border-white/10 overflow-hidden">
+                    <img src="/assets/logo.png" alt="RetailVision" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="font-bold">RetailVision</div>
+                </div>
+                <button
+                  className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-2">
+                {[
+                  { label: 'Pricing', to: '/pricing' },
+                  { label: 'Mission', to: '/mission' },
+                  { label: 'About', to: '/about' },
+                  { label: 'Contact', to: '/contact' },
+                  { label: 'Virtual Try-On Kiosk', to: '/virtual-try-on-kiosk' },
+                  { label: 'AI Kiosk', to: '/ai-kiosk' },
+                  { label: 'Retail Analytics', to: '/retail-analytics-ai' }
+                ].map((l) => (
+                  <button
+                    key={l.to}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate(l.to);
+                    }}
+                    className="w-full text-left px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200"
+                  >
+                    {l.label}
+                  </button>
+                ))}
+
+                <div className="pt-3 grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/login');
+                    }}
+                    variant="outline"
+                    className="h-12 rounded-2xl border-slate-700 text-white hover:bg-white/10 font-semibold"
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate('/signup');
+                    }}
+                    className="h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-semibold border border-white/5"
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* HERO SECTION */}
       <section className="relative pt-32 pb-20 px-6 min-h-screen flex items-center">
