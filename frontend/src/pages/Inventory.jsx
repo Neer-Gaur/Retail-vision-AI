@@ -170,14 +170,44 @@ export default function Inventory() {
         image_url: imageUrl
       };
 
+      let savedId = editingItem?.id;
+
       if (editingItem) {
         const { error } = await supabase.from('inventory').update(itemData).eq('id', editingItem.id);
         if (error) throw error;
         toast.success('Item updated');
       } else {
-        const { error } = await supabase.from('inventory').insert([itemData]);
+        const { data: ins, error } = await supabase.from('inventory').insert([itemData]).select('id').single();
         if (error) throw error;
+        savedId = ins?.id;
         toast.success('Item added');
+      }
+
+      // Kick off garment asset extraction (best-effort)
+      try {
+        const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+        const resp = await fetch(`${BACKEND_URL}/api/product-assets/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_image_url: imageUrl, category: itemData.category })
+        });
+
+        if (resp.ok) {
+          const out = await resp.json();
+          if (out?.status === 'success' && out.cutout_image && savedId) {
+            const { uploadBase64Image } = await import('../lib/supabase');
+            const cutoutUrl = await uploadBase64Image(out.cutout_image, 'product_assets');
+            const maskUrl = out.mask_image ? await uploadBase64Image(out.mask_image, 'product_assets') : null;
+
+            await supabase
+              .from('inventory')
+              .update({ garment_cutout_url: cutoutUrl, garment_mask_url: maskUrl, assets_status: 'ready' })
+              .eq('id', savedId)
+              .eq('shop_id', shop.id);
+          }
+        }
+      } catch (e) {
+        console.warn('product asset extraction failed:', e);
       }
 
       setShowAddDialog(false);

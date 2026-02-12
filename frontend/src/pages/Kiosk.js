@@ -442,7 +442,7 @@ export default function Kiosk() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             customer_photo_url: customerPhotoUrl,
-            product_image_urls: [selectedProduct.image_url],
+            product_image_urls: [selectedProduct.garment_cutout_url || selectedProduct.image_url],
             product_names: [selectedProduct.name],
             industry: shop?.industry || 'Fashion'
           })

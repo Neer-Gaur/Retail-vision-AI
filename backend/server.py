@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -11,6 +12,15 @@ from pathlib import Path
 import google.generativeai as genai
 import io
 from PIL import Image
+
+# Optional: background removal for product preprocessing
+try:
+    from rembg import remove as rembg_remove
+except Exception:
+    rembg_remove = None
+
+import numpy as np
+
 
 GOOGLE_GENAI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -55,10 +65,26 @@ class VisualizationResult(BaseModel):
 class VisualizationResponse(BaseModel):
     results: List[VisualizationResult]
 
+class ProductAssetExtractRequest(BaseModel):
+    product_image_url: str
+    category: Optional[str] = None
+
+class ProductAssetExtractResponse(BaseModel):
+    status: str  # success|failed
+    cutout_image: Optional[str] = None  # data:image/png;base64,...
+    mask_image: Optional[str] = None    # data:image/png;base64,...
+    error: Optional[str] = None
+
+
 # ============ AI Service ============
 
 async def download_image_as_base64(url: str) -> str:
-    """Download image from URL and convert to base64"""
+    """Download image from URL and convert to base64 (no data: prefix)."""
+    content = await download_image_bytes(url)
+    return base64.b64encode(content).decode('utf-8')
+
+async def download_image_bytes(url: str) -> bytes:
+    """Download image from URL and return bytes."""
     headers = {
         "User-Agent": "RetailVisionAI/1.0 (+https://retailvision.in)",
         "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
@@ -66,7 +92,24 @@ async def download_image_as_base64(url: str) -> str:
     async with httpx.AsyncClient(follow_redirects=True, headers=headers) as client:
         response = await client.get(url, timeout=30.0)
         response.raise_for_status()
-        return base64.b64encode(response.content).decode('utf-8')
+        return response.content
+
+def pil_to_data_url(img: Image.Image, fmt: str = "PNG") -> str:
+    buf = io.BytesIO()
+    img.save(buf, format=fmt)
+    b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    mime = "image/png" if fmt.upper() == "PNG" else "image/jpeg"
+    return f"data:{mime};base64,{b64}"
+
+def alpha_to_mask_data_url(img_rgba: Image.Image) -> str:
+    # Create binary-ish mask from alpha channel
+    if img_rgba.mode != 'RGBA':
+        img_rgba = img_rgba.convert('RGBA')
+    alpha = img_rgba.split()[-1]
+    # boost mask contrast
+    mask = alpha.point(lambda a: 255 if a > 10 else 0)
+    return pil_to_data_url(mask.convert('L'), fmt='PNG')
+
 
 async def generate_visualization(
     customer_photo_base64: str,
@@ -200,25 +243,56 @@ async def generate_visualization(
 async def health_check():
     return {"status": "healthy", "service": "RetailVision AI"}
 
+@api_router.post("/product-assets/extract", response_model=ProductAssetExtractResponse)
+async def extract_product_assets(request: ProductAssetExtractRequest):
+    """Extract garment cutout + mask from an inventory image.
+
+    This is called when the owner uploads/updates an inventory image. The frontend
+    can then upload returned assets to Supabase Storage and store URLs in DB.
+    """
+    if not request.product_image_url:
+        return ProductAssetExtractResponse(status="failed", error="product_image_url is required")
+
+    if rembg_remove is None:
+        return ProductAssetExtractResponse(
+            status="failed",
+            error="rembg is not available on this backend. Deploy backend with updated requirements.txt."
+        )
+
+    try:
+        raw = await download_image_bytes(request.product_image_url)
+        # rembg returns bytes with alpha
+        out = rembg_remove(raw)
+        img = Image.open(io.BytesIO(out)).convert('RGBA')
+
+        # Optional: small resize to keep asset sizes reasonable
+        max_w = 1024
+        if img.width > max_w:
+            ratio = max_w / float(img.width)
+            img = img.resize((max_w, int(img.height * ratio)), Image.LANCZOS)
+
+        cutout = pil_to_data_url(img, fmt='PNG')
+        mask = alpha_to_mask_data_url(img)
+        return ProductAssetExtractResponse(status="success", cutout_image=cutout, mask_image=mask)
+
+    except Exception as e:
+        return ProductAssetExtractResponse(status="failed", error=str(e))
+
+
 @api_router.post("/visualize", response_model=VisualizationResponse)
 async def create_visualization(request: VisualizationRequest):
     """Generate AI visualizations for products"""
-    
+
     try:
-        # Download customer photo
         customer_photo_base64 = await download_image_as_base64(request.customer_photo_url)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to download customer photo: {str(e)}")
-    
+
     results = []
-    
-    # Process each product
-    for i, (product_url, product_name) in enumerate(zip(request.product_image_urls, request.product_names)):
+
+    for product_url, product_name in zip(request.product_image_urls, request.product_names):
         try:
-            # Download product image
             product_base64 = await download_image_as_base64(product_url)
-            
-            # Generate visualization
             result = await generate_visualization(
                 customer_photo_base64=customer_photo_base64,
                 product_image_base64=product_base64,
@@ -226,14 +300,9 @@ async def create_visualization(request: VisualizationRequest):
                 industry=request.industry
             )
             results.append(result)
-            
         except Exception as e:
-            results.append(VisualizationResult(
-                product_name=product_name,
-                status="failed",
-                error=str(e)
-            ))
-    
+            results.append(VisualizationResult(product_name=product_name, status="failed", error=str(e)))
+
     return VisualizationResponse(results=results)
 
 # Include router
