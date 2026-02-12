@@ -54,7 +54,7 @@ export default function Subscription() {
   const [processing, setProcessing] = useState(false);
   const [cardDetails, setCardDetails] = useState({ number: '', expiry: '', cvv: '', name: '' });
 
-  const currentPlan = String(shop?.subscription_status || 'trial').toLowerCase();
+  const currentPlan = String(shop?.subscription_status || 'starter').toLowerCase();
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan);
@@ -101,18 +101,18 @@ export default function Subscription() {
           <Crown className="w-8 h-8 text-white" />
         </motion.div>
         <h1 className="text-3xl font-bold text-white mb-2">Upgrade Your Plan</h1>
-        <p className="text-slate-400 max-w-md mx-auto">Unlock unlimited products and premium features for your showroom.</p>
+        <p className="text-slate-400 max-w-md mx-auto">Choose a plan that matches your showroom scale. Payments are manual for now.</p>
       </div>
 
       {/* Current Plan Badge */}
       <div className="flex justify-center mb-8">
         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
-          currentPlan === 'active'
+          ['starter', 'pro', 'super', 'active'].includes(currentPlan)
             ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
             : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
         }`}>
           <Crown className="w-4 h-4" />
-          Current Plan: {currentPlan ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) : 'Trial'}
+          Current Plan: {currentPlan ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) : 'Starter'}
         </div>
       </div>
 
@@ -223,9 +223,9 @@ export default function Subscription() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="font-semibold text-white">{selectedPlan.name} Plan</p>
-                  <p className="text-sm text-slate-400">Monthly subscription</p>
+                  <p className="text-sm text-slate-400">Plan activation (manual for now)</p>
                 </div>
-                <p className="text-2xl font-bold text-red-300">₹{selectedPlan.price}</p>
+                <p className="text-2xl font-bold text-red-300">₹{selectedPlan.price.toLocaleString('en-IN')}</p>
               </div>
             </div>
           )}
@@ -290,7 +290,7 @@ export default function Subscription() {
                     className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                   />
                 ) : (
-                  <>Pay ₹{selectedPlan?.price}</>
+                  <>Pay ₹{selectedPlan?.price?.toLocaleString?.('en-IN') || selectedPlan?.price}</>
                 )}
               </Button>
             </div>
