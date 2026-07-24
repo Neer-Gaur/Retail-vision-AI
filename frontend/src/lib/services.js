@@ -178,9 +178,8 @@ export const visualizationsService = {
         .insert([{
           shop_id: shopId,
           lead_id: leadId,
-          customer_photo_url: inputPhotoUrl,
+          customer_photo_url: customerPhotoUrl,
           result_photo_url: aiResult.results[0].result_image || ''
-          
         }])
         .select()
         .single();

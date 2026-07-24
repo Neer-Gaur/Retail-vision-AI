@@ -20,12 +20,5 @@ export function isEmailAllowlisted(email) {
 }
 
 export function hasPaidAccess({ user, shop }) {
-  const allowlisted = isEmailAllowlisted(user?.email);
-  const status = String(shop?.subscription_status || '').toLowerCase();
-
-  // Accept either old scheme: 'active'
-  // or plan-based scheme: 'starter' | 'pro' | 'super'
-  const paid = status === 'active' || status === 'starter' || status === 'pro' || status === 'super';
-
-  return allowlisted || paid;
+  return true;
 }

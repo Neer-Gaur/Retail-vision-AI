@@ -124,7 +124,7 @@ export default function Signup() {
             shop_name: formData.shop_name.trim(),
             industry: formData.industry.trim(),
             admin_pin: formData.admin_pin,
-            subscription_status: 'trial',
+            subscription_status: 'pro',
             owner_name: formData.owner_name.trim(),
             phone: phoneDigits
           }
@@ -133,7 +133,7 @@ export default function Signup() {
       if (shopError) throw shopError;
 
       setStep('success');
-      setTimeout(() => navigate('/pricing?from=signup'), 2500);
+      setTimeout(() => navigate('/dashboard'), 2500);
 
       void authData;
     } catch (error) {

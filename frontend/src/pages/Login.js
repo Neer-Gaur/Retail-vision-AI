@@ -39,21 +39,6 @@ export default function Login() {
     try {
       const { user, shop } = await signIn(email, password);
 
-      const allowlisted = (process.env.REACT_APP_ALLOWED_EMAILS || '')
-        .split(',')
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean)
-        .includes(String(user?.email || '').toLowerCase());
-
-      const status = String(shop?.subscription_status || '').toLowerCase();
-      const hasPlan = status === 'active' || status === 'starter' || status === 'pro' || status === 'super';
-
-      if (!allowlisted && !hasPlan) {
-        toast.error('Please select a plan to continue');
-        navigate('/pricing');
-        return;
-      }
-
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
